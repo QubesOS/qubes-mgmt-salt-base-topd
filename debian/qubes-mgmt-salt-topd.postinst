@@ -23,7 +23,7 @@ case "${1}" in
         # - Add formula path to file_roots
         # - Add formula to salt top.sls
         # - Add formula to pillar top.sls if contains pillar data
-        qubesctl saltutil.sync_all -l quiet --out quiet
+        salt-call --local saltutil.sync_all -l quiet --out quiet > /dev/null || true
         ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

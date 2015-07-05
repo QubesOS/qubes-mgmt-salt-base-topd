@@ -16,9 +16,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-PACKAGE_NAME := qubes-mgmt-salt-template
+PACKAGE_NAME := qubes-mgmt-salt-base-topd
 PACKAGE_CONTENTS := README.rst LICENSE 
-FORMULA_DIR ?= /srv/formulas
+FORMULA_DIR ?= /srv/formulas/base
 FORMULA_NAME := $(shell cat formula_name)
 
 RPMS_DIR := rpm/
