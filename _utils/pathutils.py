@@ -32,7 +32,7 @@ Determine current path type:
     - is_salt_path(path, saltenv) -> boolean
     - is_cache_path(path, saltenv) -> boolean
     - is_local_path(path, saltenv) -> boolean
-    - is_sls(path, saltenv) -> boolean
+    - is_slspath(path, saltenv) -> boolean
 
 Utils:
     - Get cache directory for given salt environment: |
@@ -49,6 +49,7 @@ Filter:
 
 # Import python libs
 import collections
+import copy
 import logging
 import os
 
@@ -67,7 +68,10 @@ import salt.ext.six as six
 
 from salt.utils import dictupdate
 from salt.exceptions import SaltRenderError
-from salt.utils.odict import OrderedDict
+from salt.utils.odict import (
+    OrderedDict,
+    DefaultOrderedDict
+    )
 
 # Import custom libs
 import matcher
@@ -97,13 +101,15 @@ class PathUtils(object):
     '''
     Mapping and various utility functions for salt paths.
     '''
-    def __init__(self, opts, *varargs, **kwargs):
+    def __init__(self, opts, pillar=False, *varargs, **kwargs):
         self.opts = opts
+        self.pillar = pillar
+
         self.client = salt.fileclient.get_file_client(self.opts, self.is_pillar())
         self.server = salt.fileserver.Fileserver(self.opts)
 
-        self._states = {}
-        self._tops = {}
+        self._states = DefaultOrderedDict(list)
+##        self._toplist = None
         self._saltenvs = self.client.envs()
 
     def saltenv(self, path, saltenv=None):
@@ -193,7 +199,8 @@ class PathUtils(object):
               view=None,
               files=None,
               flat=None,
-              fileinfo_extra=None,
+##              fileinfo_extra=None,
+              pathinfo=None,
               **patterns):
         '''
         Return a list of the files in the file server's specified environment
@@ -215,11 +222,8 @@ class PathUtils(object):
             otherwise a dictionary with the passed saltenv will be returned.
             The default for a single salt environment is to flatten
 
-        fileinfo_extra:
-            A dictionary of extra variables or hooks passed as keyword arguments
-            to the fileinfo element creation methods are are availabe in the
-            `element` and `add` methods.  Function hooks are also supported
-            identified by `_add_hook` and `_element_hook`.
+        pathinfo:
+            FileInfo instance to use to parse filelist
         '''
         if files:
             return self.find(files, **patterns)
@@ -241,15 +245,15 @@ class PathUtils(object):
         #      topinfo may want to have different object; maybe a routine
         #      that calls this one first so as not to overload file signature
         # Walk roots to retreive a listing of all files
-        pathinfo = PathInfo(match_each=True, **patterns)
+        pathinfo = pathinfo or PathInfo(match_each=True, **patterns)
 
-        # Extra args for pathinfo
-        fileinfo_extra = fileinfo_extra or {}
-        fileinfo_extra['cachedir'] = self.opts.get('cachedir', None)
-        fileinfo_extra['is_pillar'] = self.is_pillar()
+        # Extra kwargs for pathinfo
+        extra_kwargs = {}
+        extra_kwargs['cachedir'] = self.opts.get('cachedir', None)
+        extra_kwargs['is_pillar'] = self.is_pillar()
 
         # Generate filtered pathinfo list
-        files = pathinfo.filelist(roots=roots, **fileinfo_extra)
+        files = pathinfo.filelist(roots=roots, **extra_kwargs)
 
         # Determine and return pathinfo view which can be one of flattened,
         # reduceby (dictionary) or all (un-modified).
@@ -265,7 +269,7 @@ class PathUtils(object):
             relpath = ['*.sls']
         '''
         if files is None:
-            files = self.files(view='all')
+            files = self.files(view='raw')
         return fileinfo.find(files, **patterns)
 
     def states(self, saltenv=None):
@@ -275,24 +279,41 @@ class PathUtils(object):
         '''
         states = {}
         for saltenvs in self.saltenvs(saltenv):
-            states[saltenv] = self.client.list_states(saltenv)
+            # Cache states
+            if saltenv not in self._states:
+                self._states[saltenv] = self.client.list_states(saltenv)
+            states[saltenv] = copy.deepcopy(self._states[saltenv])
         return states
 
-    # XXX: Convert to sls format
-    def tops(self, saltenv=None):
-        '''
-        Return a list of tops files in the specified environment or a dictionary
-        of all results if saltenv is None.
-        '''
-        return self.files(saltenv=saltenv,
-                          view=['saltenv', 'relpath'],
-                          flat=False,
-                          relpath=['*.top'])
+##    # XXX Move to top_utils; have top_utils extend path_utils
+##    def tops(self, saltenv=None):
+##        '''
+##        Return a list of tops files in the specified environment or a dictionary
+##        of all results if saltenv is None.
+##        '''
+##        if self._toplist is None:
+##            self._toplist = self.files(saltenv=saltenv,
+##                                       view='raw',
+##                                       relpath=['*.top'])
+##        toplist = copy.deepcopy(self._toplist)
+##
+##        tops = DefaultOrderedDict(list)
+##        for info in toplist:
+##            relpath = self.get(info, 'relpath')
+##            if salt.utils.is_windows():
+##                relpath = relpath.replace('\\', '/')
+##            if relpath.endswith('{0}init.top'.format('/')):
+##                tops[self.get(info, 'saltenv')].append(
+##                    relpath.replace('/', '.')[:-9])
+##            else:
+##                tops[self.get(info, 'saltenv')].append(
+##                    relpath.replace('/', '.')[:-4])
+##        return tops
 
     def report(self, files=None, saltenv=None, patterns=None):
         if not files:
             saltenvs = self.saltenvs(saltenv)
-            files = self.files(saltenvs, view=all, **patterns)
+            files = self.files(saltenvs, view='raw', **patterns)
         report = OrderedDict()
 
         for pathinfo in files:
@@ -321,7 +342,7 @@ class PathUtils(object):
         #info['server_path'] = self.server.find_file(self.get(pathinfo, 'relpath'),
         #                                            self.get(pathinfo, 'saltenv'))
         info['salt_path'] = self.salt_path(pathinfo)
-        info['sls'] = self.sls(pathinfo)
+        info['slspath'] = self.slspath(pathinfo)
         info['is_pillar'] = self.get(pathinfo, 'is_pillar')
         #info['test'] = self.get(pathinfo, 'file_root').split('|')
         return info
@@ -336,7 +357,7 @@ class PathUtils(object):
         #opts = self.client.opts
         return True if opts['file_roots'] is opts['pillar_roots'] else False
 
-    def type(self, path, saltenv=None):
+    def path_type(self, path, saltenv=None):
         '''
         Return path type.
         '''
@@ -346,7 +367,7 @@ class PathUtils(object):
         if self.is_relpath(path, saltenv):
             return 'relpath'
 
-        elif self.is_sls(path, saltenv):
+        elif self.is_slspath(path, saltenv):
             return 'sls'
 
         elif self.is_cache_path(path):
@@ -361,7 +382,7 @@ class PathUtils(object):
         else:
             return 'unknown'
 
-    def path(self, path, saltenv=None):
+    def path(self, path, saltenv=None, path_type=None):
         '''
         Relative salt path is the base path that all paths rely on.  Any
         conversions from formats that are not relative will happen here.
@@ -372,13 +393,13 @@ class PathUtils(object):
         path = self._normpath(path)
         saltenv = saltenv or self.saltenv(path, saltenv)
         url = salt.utils.urlparse(path)
-        path_type = self.type(path, saltenv)
+        path_type = path_type or self.path_type(path, saltenv)
 
         if path_type in ['relpath']:
             #return url.path
             return path
 
-        if path_type in ['sls']:
+        if path_type in ['slspath']:
             source = self.client.get_state(url.path, saltenv).get('source')
             return salt.utils.url.parse(source)[0]
 
@@ -407,7 +428,7 @@ class PathUtils(object):
             url = salt.utils.urlparse(path)
             if not salt.utils.url.validate(path, ['']) or os.path.isabs(url.path):
                 return False
-            return not self.is_sls(url.path, saltenv)
+            return not self.is_slspath(url.path, saltenv)
         except AttributeError:
             return False
 
@@ -544,9 +565,9 @@ class PathUtils(object):
                     return abspath
             return ''
 
-    def is_sls(self, path, saltenv=None):
+    def is_slspath(self, path, saltenv=None):
         '''
-        sls: 'topd'
+        slspath: 'topd'
         '''
         #saltenv = saltenv if saltenv else self.saltenv(path, saltenv)
         #for env in self.saltenvs(saltenv):
@@ -557,12 +578,12 @@ class PathUtils(object):
             lambda x: x==path,
             chain.from_iterable(six.itervalues(self.states())))))
 
-    def sls(self, path, saltenv=None):
+    def slspath(self, path, saltenv=None):
         '''
-        sls: 'topd'
+        slspath: 'topd'
         '''
         if isinstance(path, list):
-            return [self.sls(p, saltenv) for p in path]
+            return [self.slspath(p, saltenv) for p in path]
         try:
             saltenv = self.get(path, 'saltenv')
             relpath = self.get(path, 'relpath')
@@ -573,46 +594,51 @@ class PathUtils(object):
             return ''
         sls = relpath.lower().split('/init.sls')[0]
         sls = os.path.splitext(sls)[0].replace('/', '.')
-        if self.is_sls(sls, saltenv):
+        if self.is_slspath(sls, saltenv):
             return sls
         return ''
 
-    # XXX Add to docs and report and path
-    def is_top(self, path, saltenv=None):
-        '''
-        top: 'salt'        (relpath: salt/init.top)
-        top: 'salt.minion' (relpath: salt/minion.top)
-        top: 'salt.minion' (relpath: topsd/base|salt.minion)
-        '''
-        try:
-            saltenv = self.get(path, 'saltenv')
-        except AttributeError:
-            saltenv = saltenv or self.saltenv(path, saltenv)
-        for env in self.saltenvs(saltenv):
-            if path in self.tops(env):
-                return True
-        return False
-
-    # XXX Add to docs and report and path
-    def top(self, path, saltenv=None):
-        '''
-        top: 'salt'        (relpath: salt/init.top)
-        top: 'salt.minion' (relpath: salt/minion.top)
-        top: 'salt.minion' (relpath: topsd/base|salt.minion)
-        '''
-        if isinstance(path, list):
-            return [self.top(p, saltenv) for p in path]
-        try:
-            saltenv = self.get(path, 'saltenv')
-            relpath = self.get(path, 'relpath')
-        except AttributeError:
-            saltenv = saltenv or self.saltenv(path, saltenv)
-            relpath = self.relpath(path, saltenv)
-        top = relpath.lower().split('/init.top')[0]
-        top = os.path.splitext(top)[0].replace('/', '.')
-        if self.is_top(top, saltenv):
-            return top
-        return ''
+##    # XXX Add to docs and report and path
+##    # XXX Move to top_utils; have top_utils extend path_utils
+##    def is_toppath(self, path, saltenv=None):
+##        '''
+##        toppath: 'salt'        (relpath: salt/init.top)
+##        toppath: 'salt.minion' (relpath: salt/minion.top)
+##        toppath: 'salt.minion' (relpath: topd/base|salt.minion)
+##        '''
+##        return bool(set(ifilter(
+##            lambda x: x==path,
+##            chain.from_iterable(six.itervalues(self.tops())))))
+##
+##    # XXX Add to docs and report and path
+##    # XXX Move to top_utils; have top_utils extend path_utils
+##    def toppath(self, path, saltenv=None):
+##        '''
+##        toppath: 'salt'        (relpath: salt/init.top)
+##        toppath: 'salt.minion' (relpath: salt/minion.top)
+##        toppath: 'salt.minion' (relpath: topd/base|salt.minion)
+##        '''
+##        if isinstance(path, list):
+##            return [self.toppath(p, saltenv) for p in path]
+##        try:
+##            saltenv = self.get(path, 'saltenv')
+##            relpath = self.get(path, 'relpath')
+##        except AttributeError:
+##            if self.is_toppath(path, saltenv):
+##                return path
+##            saltenv = saltenv or self.saltenv(path, saltenv)
+##            relpath = self.relpath(path, saltenv)
+##
+##        # XXX: Change to self.topd_directory once moved to top_utils
+##        topd_dir = self.opts.get(u'topd_dir', u'_topd')
+##        if relpath.startswith(topd_dir):
+##            relpath = relpath.split(topd_dir)[1]
+##
+##        top = relpath.lower().split('/init.top')[0]
+##        top = os.path.splitext(top)[0].replace('/', '.')
+##        if self.is_toppath(top, saltenv):
+##            return top
+##        return ''
 
     def file_root(self, path, saltenv=None):
         '''
