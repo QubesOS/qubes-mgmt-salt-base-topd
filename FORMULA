@@ -1,0 +1,22 @@
+# vim: set syntax=yaml ts=2 sw=2 sts=2 et :
+
+name:          topd-formula
+top_level_dir: topd
+saltenv:       base
+version:       3.0.0
+release:       1
+os:            RedHat, Debian, Ubuntu, Suse, FreeBSD
+os_family:     RedHat, Debian, Suse, FreeBSD
+summary:       Salt top module plugin that allows top drop-ins
+description: |
+  Salt top module plugin that allows top drop-ins
+
+state-tops:
+  base:
+    enable:
+      - topd
+  
+pillar-tops:
+  base:
+    enable:
+      - topd
