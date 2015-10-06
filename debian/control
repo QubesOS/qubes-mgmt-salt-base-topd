@@ -9,5 +9,5 @@ Homepage: http://www.qubes-os.org
 Package: qubes-mgmt-salt-base-topd
 Section: admin
 Architecture: all
-Depends: qubes-mgmt-salt-base, qubes-mgmt-salt-config
-Description: Formula description.
+Depends: qubes-mgmt-salt-config
+Description: Salt top module plugin that allows top drop-ins
