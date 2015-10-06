@@ -253,25 +253,37 @@ def debug(*varargs, **kwargs):
 def enabled(*varargs, **kwargs):
     paths = kwargs.get('paths', varargs)
     saltenv = kwargs.get('saltenv', None)
-    return TopUtils(__opts__).enabled(paths, saltenv)
+    return TopUtils(__opts__, **kwargs).enabled(paths, saltenv)
 
 
 def disabled(*varargs, **kwargs):
     paths = kwargs.get('paths', varargs)
     saltenv = kwargs.get('saltenv', None)
-    return TopUtils(__opts__).disabled(paths, saltenv)
+    return TopUtils(__opts__, **kwargs).disabled(paths, saltenv)
 
 
 def is_enabled(*varargs, **kwargs):
     paths = kwargs.get('paths', varargs)
     saltenv = kwargs.get('saltenv', None)
-    return TopUtils(__opts__).is_enabled(paths, saltenv)
+    return TopUtils(__opts__, **kwargs).is_enabled(paths, saltenv)
+
+
+def enable(*varargs, **kwargs):
+    paths = kwargs.get('paths', varargs)
+    saltenv = kwargs.get('saltenv', None)
+    return TopUtils(__opts__, **kwargs).enable(paths, saltenv)
+
+
+def disable(*varargs, **kwargs):
+    paths = kwargs.get('paths', varargs)
+    saltenv = kwargs.get('saltenv', None)
+    return TopUtils(__opts__, **kwargs).disable(paths, saltenv)
 
 
 def report(*varargs, **kwargs):
     paths = kwargs.get('paths', varargs)
     saltenv = kwargs.get('saltenv', None)
-    return TopUtils(__opts__).report(paths, saltenv)
+    return TopUtils(__opts__, **kwargs).report(paths, saltenv)
 
 
 def status(*varargs, **kwargs):
@@ -283,9 +295,9 @@ def status(*varargs, **kwargs):
     saltenv = kwargs.get('saltenv', None)
 
     if paths or saltenv:
-        return TopUtils(__opts__).tops(paths, saltenv)
+        return TopUtils(__opts__, **kwargs).tops(paths, saltenv)
     else:
-        return TopUtils(__opts__).report()
+        return TopUtils(__opts__, **kwargs).report()
 
 def get_envs(opts=None):
     '''
