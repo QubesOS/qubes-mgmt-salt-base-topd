@@ -345,7 +345,7 @@ def render(path, opts=None, saltenv='base', sls=''):
 
 
 # XXX: Look at passing pathutils since it loads with each pass
-def render_top(opts):
+def render_top(opts, toputils):
     '''
     Gather the top files
     '''
@@ -353,33 +353,38 @@ def render_top(opts):
     include = DefaultOrderedDict(list)
     done = DefaultOrderedDict(list)
 
-    pathutils = PathUtils(opts)
     renderers = get_renderers(opts)
-    #client = get_fileclient(opts)
     environment = get_environment(opts)
 
     # Gather initial top files
     if opts['top_file_merging_strategy'] == 'same' and not opts[environment]:
         if not opts['default_top']:
-            raise SaltRenderError('Top file merge strategy set to same, but no default_top '
-                      'configuration option was set')
+            raise SaltRenderError(
+                'Top file merge strategy set to same, but no default_top '
+                'configuration option was set')
         opts[environment] = opts['default_top']
 
     if opts[environment]:
-        salt_data = render(opts['state_top'], opts=opts, saltenv=opts[environment])
+        salt_data = render(opts['state_top'],
+                           opts=opts,
+                           saltenv=opts[environment])
         if salt_data:
             tops[opts[environment]] = salt_data
     elif opts['top_file_merging_strategy'] == 'merge':
         if opts.get('state_top_saltenv', False):
             saltenv = opts['state_top_saltenv']
-            salt_data = render(opts['state_top'], opts=opts, saltenv=saltenv)
+            salt_data = render(opts['state_top'],
+                               opts=opts,
+                               saltenv=saltenv)
             if salt_data:
                 tops[saltenv].append(salt_data)
             else:
                 log.debug('No contents loaded for env: {0}'.format(saltenv))
         else:
             for saltenv in get_envs(opts):
-                salt_data = render(opts['state_top'], opts=opts, saltenv=saltenv)
+                salt_data = render(opts['state_top'],
+                                   opts=opts,
+                                   saltenv=saltenv)
                 if salt_data:
                     tops[saltenv].append(salt_data)
                 else:
@@ -402,19 +407,17 @@ def render_top(opts):
             if not states:
                 continue
             for sls_match in states:
-                #avail = gather_avail(opts)
-                avail = pathutils.states(saltenv)
-                for sls in fnmatch.filter(avail[saltenv], sls_match):
+                states = toputils.states(saltenv)
+                for sls in fnmatch.filter(states[saltenv], sls_match):
                     if sls in done[saltenv]:
                         continue
-                    #path = client.get_state(sls, saltenv).get('source', False)
-                    #path = pathutils.salt_path(sls, saltenv)
-                    #salt_data = render(path, opts=opts, saltenv=saltenv)
                     salt_data = render(sls, opts=opts, saltenv=saltenv)
                     if salt_data:
                         tops[saltenv].append(salt_data)
                     else:
-                        log.debug('No contents loaded for include {0} env: {1}'.format(path, saltenv))
+                        log.debug(
+                            'No contents loaded for include {0} env: {1}'
+                            .format(path, saltenv))
                     done[saltenv].append(sls)
         for saltenv in pops:
             if saltenv in include:
@@ -460,7 +463,8 @@ def merge_tops(tops):
                             top[saltenv][tgt] = matches
                             top[saltenv][tgt].extend(list(states))
                     except TypeError:
-                        raise SaltRenderError('Unable to render top file. No targets found.')
+                        raise SaltRenderError(
+                            'Unable to render top file. No targets found.')
     return top
 
 
@@ -473,139 +477,16 @@ def get_top(path, opts=None, saltenv='base'):
     #opts = copy.deepcopy(get_opts(opts))
     opts = get_opts(opts)
 
-    #pathutils = __salt__.pathutils.pathutils(opts)
-    pathutils = PathUtils(opts)
-    files = pathutils.files(
-        saltenv,
-        relpath='{0}*.top'.format(pathutils.relpath(path, saltenv)))
+    toputils = TopUtils(opts, pillar=is_pillar(opts))
+    enabled = toputils.enabled(saltenv=saltenv, view='raw')
 
     try:
-        for path in files:
+        for topinfo in enabled:
             opts['state_top_saltenv'] = 'base'
-            opts['state_top'] = pathutils.salt_path(path)
-            tops.append(render_top(opts))
+            opts['state_top'] = toputils.salt_path(topinfo)
+            tops.append(render_top(opts, toputils))
         tops = dict(merge_tops(tops))
     except SaltRenderError:
         tops = {}
 
     return tops
-
-
-##def file_roots(saltenv=None):
-##    '''
-##    Returns all active file roots.
-##    '''
-##    # Check if 'file_roots' is cached
-##    if 'file_roots' in __context__ and 'file_roots_env' in __context__:
-##        if __context__['file_roots_env'] == saltenv:
-##            return __context__['file_roots']
-##
-##    file_roots = OrderedDict()
-##    default_file_dir = __salt__['pillar.get']('default_file_dir', DEFAULT_FILE_DIR)
-##    salt_config_dir = __salt__['pillar.get']('salt_config_dir', SALT_CONFIG_DIR)
-##
-##    # First get the default file_roots
-##    path = os.path.join(salt_config_dir, FILE_ROOTS)
-##    paths = __salt__['file.find'](path=path, name='*.sls')
-##    for salt_data in _render(paths, saltenv='base'):
-##        merge(file_roots, salt_data.get('file_roots', {}), create=True, append=True)
-##
-##    # Next get all active formual file_roots
-##    paths = formula_basedirs(saltenv)
-##    for env, path in paths.items():
-##        if os.path.exists(path) and os.path.isdir(path):
-##            #for file_dir in __salt__['file.find'](path=path, type='d', maxdepth=0):
-##            for file_dir in __salt__['file.readdir'](path):
-##                if os.path.exists(file_dir) and os.path.isdir(file_dir):
-##                    if enabled(os.path.dirname(file_dir)):
-##                        merge(file_roots, {env: [file_dir]}, create=True, append=True)
-##
-##    # Save in __context__ so it doen not need to be reloaded
-##    __context__['file_roots_env'] = saltenv
-##    __context__['file_roots'] = file_roots
-##
-##    return file_roots
-
-
-##def pillar_roots(saltenv=None):
-##    '''
-##    Returns all active pillar roots.
-##    '''
-##    # Check if 'pillar_roots' is cached
-##    if 'pillar_roots' in __context__ and 'pillar_roots_env' in __context__:
-##        if __context__['pillar_roots_env'] == saltenv:
-##            return __context__['pillar_roots']
-##
-##    pillar_roots = OrderedDict()
-##    default_pillar_dir = __salt__['pillar.get']('default_pillar_dir', DEFAULT_PILLAR_DIR)
-##    salt_config_dir = __salt__['pillar.get']('salt_config_dir', SALT_CONFIG_DIR)
-##
-##    # First get the default pillar_roots
-##    path = os.path.join(salt_config_dir, PILLAR_ROOTS)
-##    paths = __salt__['file.find'](path=path, name='*.sls')
-##    for salt_data in _render(paths, saltenv='base'):
-##        merge(pillar_roots, salt_data.get('pillar_roots', {}), create=True, append=True)
-##
-##    # Next find any pillars with formula directories
-##    paths = formula_basedirs(saltenv)
-##    for env, path in paths.items():
-##        for pillar_dir in __salt__['file.find'](path=path, name='pillar', maxdepth=1):
-##            if os.path.exists(pillar_dir) and os.path.isdir(pillar_dir):
-##                if enabled(os.path.dirname(pillar_dir)):
-##                    merge(pillar_roots, {env: [pillar_dir]}, create=True, append=True)
-##
-##    # Save in __context__ so it doen not need to be reloaded
-##    __context__['pillar_roots_env'] = saltenv
-##    __context__['pillar_roots'] = pillar_roots
-##
-##    return pillar_roots
-
-
-##def merge(target, source, create=False, allowed=None, append=False):
-##    '''
-##    Merges the values of a nested dictionary of varying depth without over-
-##    writing the targets root nodes.
-##
-##    target
-##        Target dictionary to update
-##
-##    source
-##        Source dictionary that will be used to update `target`
-##
-##    create
-##        if True then new keys can be created during update, otherwise they will be tossed
-##        if they do not exist in `target`.
-##
-##    allowed
-##        list of allowed keys that can be created even if create is False
-##
-##    append [True] or ['list_of_keys', 'key4']
-##        appends to strings or lists if append is True or key in list
-##    '''
-##    if not allowed:
-##        allowed = []
-##
-##    if isinstance(target, list):
-##        for t in target:
-##            target_ = merge(t, source, create=create, allowed=allowed, append=append)
-##        return target_
-##
-##    for key, value in source.items():
-##        if isinstance(value, collections.Mapping):
-##            if key in target.keys() or create or key in allowed:
-##                replace = merge(target.get(key, {}), value, create=create, allowed=allowed, append=append)
-##                target[key] = replace
-##        else:
-##            if key in target.keys() or create or key in allowed:
-##                if append and (append is True or key in append):
-##                    if isinstance(source[key], str) and isinstance(target.get(key, ''), str):
-##                        target.setdefault(key, '')
-##                        target[key] += source[key]
-##                    elif isinstance(source[key], list) and isinstance(target.get(key, []), list):
-##                        target.setdefault(key, [])
-##                        target[key].extend(source[key])
-##                    else:
-##                        target[key] = source[key]
-##                else:
-##                    target[key] = source[key]
-##    return target
