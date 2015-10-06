@@ -263,6 +263,8 @@ def compile(labels, **patterns):
     for label in labels:
         if label in patterns and patterns[label]:
             field = patterns[label]
+            if isinstance(field, re._pattern_type):
+                field = [field.pattern]
             if isinstance(field, six.string_types):
                 field = [field]
             if label in escape or not regex:
