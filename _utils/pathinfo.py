@@ -59,7 +59,7 @@ def __virtual__():
 
 
 class PathInfo(fileinfo.FileInfo):
-    def __init__(self, match_each=True, **patterns):
+    def __init__(self, fields=None, match_each=True, **patterns):
         '''
         match_each:
             If True, each file path is matched which prevents uses less memory
@@ -97,7 +97,7 @@ class PathInfo(fileinfo.FileInfo):
             cache_root = ''
 
         # ('saltenv','file_root','cache_root','abspath','relpath','is_pillar')
-        element = self.FileInfo(
+        element = self.Info(
             saltenv=kwargs.get('saltenv', 'base'),
             file_root=file_root,
             cache_root=cache_root,
@@ -106,17 +106,9 @@ class PathInfo(fileinfo.FileInfo):
             is_pillar=kwargs.get('is_pillar', False),
         )
 
-        element_hook = kwargs.get('_element_hook', None)
-        if element_hook:
-            element = element_hook(self, element, **kwargs)
-
         return element
 
     def add_element(self, element, **kwargs):
-        add_hook = kwargs.get('_add_hook', None)
-        if add_hook:
-            element = add_hook(self, element, **kwargs)
-
         self._elements.add(element)
 
     def filelist(self, roots, **kwargs):
