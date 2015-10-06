@@ -53,7 +53,7 @@ class FileInfo(object):
         self.match_each = match_each
         self.patterns = patterns
 
-        self.FileInfo = collections.namedtuple('FileInfo', self.fields)
+        self.Info = collections.namedtuple('Info', self.fields)
         self._elements = set()
         self.pattern = self.element()
 
@@ -92,7 +92,7 @@ class FileInfo(object):
             abspath = os.path.abspath('.')
         relpath = os.path.relpath(abspath, root)
 
-        element = self.FileInfo(
+        element = self.Info(
             root=root,
             abspath=abspath,
             relpath=relpath
@@ -140,7 +140,7 @@ def find(files, **patterns):
     return list(matcher.ifilter(files, **patterns))
 
 
-def walk(dirnames, follow_links=True):
+def walk(dirnames, followlinks=True):
     '''
     Helper util to return a list of files in a directory
     '''
@@ -148,7 +148,7 @@ def walk(dirnames, follow_links=True):
         if not os.path.isdir(dirname):
             dirname = os.path.dirname(dirname)
 
-        for root, dirs, files in os.walk(dirname, followlinks=follow_links):
+        for root, dirs, files in os.walk(dirname, followlinks=followlinks):
             for filename in files:
                 yield dirname, os.path.join(root, filename)
 
@@ -216,7 +216,7 @@ def get_pattern(element, pattern=False, **patterns):
 
 def get_view(sequence, view=None, flat=None):
     '''
-    Determine type of view to return (flattened, reduceby, all)
+    Determine type of view to return (flattened, reduceby, raw)
     '''
     if not sequence:
         return sequence
@@ -226,7 +226,7 @@ def get_view(sequence, view=None, flat=None):
         view = [view]
 
     labels = matcher.extract_labels(*sequence)
-    if 'all' in view:
+    if 'raw' in view:
         view = labels
     selectors = matcher.generate_selectors(labels, *view)
     fields = list(compress(labels, selectors))
@@ -244,7 +244,7 @@ def get_view(sequence, view=None, flat=None):
     elif len(fields) in [1,2]:
         viewinfo['mode'] = 'reduceby'
     else:
-        viewinfo['mode'] = 'all'
+        viewinfo['mode'] = 'raw'
 
     return viewinfo
 
@@ -252,12 +252,12 @@ def get_view(sequence, view=None, flat=None):
 def fileinfo_view(fileinfo, view=None, flat=False):
     '''
     Determine and return fileinfo view which can be one of flattened,
-    reduceby (dictionary) or all (un-modified).
+    reduceby (dictionary) or raw (un-modified).
     '''
     if not fileinfo:
         return fileinfo
 
-    # Determine type of view to return (flattened, reduceby, all)
+    # Determine type of view to return (flattened, reduceby, raw)
     viewinfo = get_view(fileinfo,
                         view=view,
                         flat=flat)
