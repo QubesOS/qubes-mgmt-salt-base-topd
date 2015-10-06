@@ -2,7 +2,7 @@
 topd formula
 ===============
 
-Formula description
+Salt top module plugin that allows top drop-ins
 
 
 Available states
