@@ -478,7 +478,8 @@ class TopUtils(PathUtils):
                 if not os.path.exists(path):
                     os.symlink(topinfo.abspath, path)
                     results['enabled'].append(topinfo.toppath)
-                    toppaths.remove(topinfo.toppath)
+                    if topinfo.toppath in toppaths:
+                        toppaths.remove(topinfo.toppath)
 
         if toppaths:
             enabled = self.enabled(paths=toppaths,
@@ -486,7 +487,8 @@ class TopUtils(PathUtils):
                                    view='raw')
             for topinfo in enabled:
                 results['unchanged'].append(topinfo.toppath)
-                toppaths.remove(topinfo.toppath)
+                if topinfo.toppath in toppaths:
+                    toppaths.remove(topinfo.toppath)
 
         if unseen:
             for path in unseen:
