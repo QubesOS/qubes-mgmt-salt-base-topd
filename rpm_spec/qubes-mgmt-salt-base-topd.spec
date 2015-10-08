@@ -26,7 +26,10 @@ URL:	   http://www.qubes-os.org/
 
 Group:     System administration tools
 BuildArch: noarch
+Requires:  salt
+Requires:  salt-minion
 Requires:  qubes-mgmt-salt-config
+Requires(post): /usr/bin/salt-call
 
 %define _builddir %(pwd)
 
@@ -47,11 +50,11 @@ make install DESTDIR=%{buildroot} LIBDIR=%{_libdir} BINDIR=%{_bindir} SBINDIR=%{
 
 %post
 # Update Salt Configuration
-qubesctl state.sls qubes.config -l quiet --out quiet > /dev/null || true
-qubesctl saltutil.sync_all -l quiet --out quiet > /dev/null || true
+#/usr/bin/salt-call --local state.sls qubes.config -l quiet --out quiet > /dev/null || true
+/usr/bin/salt-call --local saltutil.sync_all -l quiet --out quiet > /dev/null || true
 
 # Enable States
-qubesctl topd.enable %{state_name} saltenv=%{saltenv} -l quiet --out quiet > /dev/null || true
+/usr/bin/salt-call --local topd.enable %{state_name} saltenv=%{saltenv} -l quiet --out quiet > /dev/null || true
 
 %files
 %defattr(-,root,root)

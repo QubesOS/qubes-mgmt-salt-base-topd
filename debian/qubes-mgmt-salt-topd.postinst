@@ -20,8 +20,11 @@
 case "${1}" in
     configure)
         # Update Salt Configuration
-        qubesctl state.sls qubes.config -l quiet --out quiet > /dev/null || true
-        qubesctl saltutil.sync_all -l quiet --out quiet > /dev/null || true
+        #/usr/bin/salt-call --local state.sls qubes.config -l quiet --out quiet > /dev/null || true
+        /usr/bin/salt-call --local saltutil.sync_all -l quiet --out quiet > /dev/null || true
+
+        # Enable States
+        /usr/bin/salt-call --local topd.enable %{state_name} saltenv=%{saltenv} -l quiet --out quiet > /dev/null || true
         ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
