@@ -1,26 +1,20 @@
-%{!?version: %define version %(cat version)}
-%{!?rel: %define rel %(cat rel)}
+%{!?version: %define version %(make get-version)}
+%{!?rel: %define rel %(make get-release)}
+%{!?package_name: %define package_name %(make get-package_name)}
+%{!?package_summary: %define package_summary %(make get-summary)}
+%{!?package_description: %define package_description %(make get-description)}
 
-%{!?formula_name: %define formula_name %(grep 'name' FORMULA|head -n 1|cut -f 2 -d :|xargs)}
-%{!?state_name: %define state_name %(grep 'top_level_dir' FORMULA|head -n 1|cut -f 2 -d :|xargs)}
-%{!?saltenv: %define saltenv %(grep 'saltenv' FORMULA|head -n 1|cut -f 2 -d :|xargs)}
-
-%if "%{state_name}" == ""
-  %define state_name %{formula_name}
-%endif
-
-%if "%{saltenv}" == ""
-  %define saltenv base
-%endif
-
-%define salt_state_dir /srv/salt
-%define salt_pillar_dir /srv/pillar
-%define salt_formula_dir /srv/formulas
+%{!?formula_name: %define formula_name %(make get-formula_name)}
+%{!?state_name: %define state_name %(make get-state_name)}
+%{!?saltenv: %define saltenv %(make get-saltenv)}
+%{!?state_dir: %define state_dir %(make get-salt_state_dir)}
+%{!?pillar_dir: %define pillar_dir %(make get-pillar_dir)}
+%{!?formula_dir: %define formula_dir %(make get-formula_dir)}
 
 Name:      qubes-mgmt-salt-base-topd
 Version:   %{version}
 Release:   %{rel}%{?dist}
-Summary:   Salt top module plugin that allows top drop-ins
+Summary:   %{package_summary}
 License:   GPL 2.0
 URL:	   http://www.qubes-os.org/
 
@@ -34,7 +28,7 @@ Requires(post): /usr/bin/salt-call
 %define _builddir %(pwd)
 
 %description
-Salt top module plugin that allows top drop-ins
+%{package_description}
 
 %prep
 # we operate on the current directory, so no need to unpack anything
@@ -46,7 +40,7 @@ ln -sf . %{name}-%{version}
 %build
 
 %install
-make install DESTDIR=%{buildroot} LIBDIR=%{_libdir} BINDIR=%{_bindir} SBINDIR=%{_sbindir} SYSCONFDIR=%{_sysconfdir} VERBOSE=%{_verbose}
+make install DESTDIR=%{buildroot} LIBDIR=%{_libdir} BINDIR=%{_bindir} SBINDIR=%{_sbindir} SYSCONFDIR=%{_sysconfdir}
 
 %post
 # Update Salt Configuration
@@ -58,9 +52,9 @@ make install DESTDIR=%{buildroot} LIBDIR=%{_libdir} BINDIR=%{_bindir} SBINDIR=%{
 
 %files
 %defattr(-,root,root)
-%attr(750, root, root) %dir %{salt_formula_dir}/%{saltenv}/%{formula_name}
-%attr(750, root, root) %dir %{salt_state_dir}/_topd
-%attr(750, root, root) %dir %{salt_pillar_dir}/_topd
-%{salt_formula_dir}/%{saltenv}/%{formula_name}/*
+%attr(750, root, root) %dir %{formula_dir}
+%{formula_dir}/*
+%attr(750, root, root) %dir %{state_dir}/_topd
+%attr(750, root, root) %dir %{pillar_dir}/_topd
 
 %changelog
