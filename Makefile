@@ -21,6 +21,6 @@ include Makefile.install
 
 .PHONY: install
 install:: 
-	# Install State and Pillar _topd directories
-	@install -d -m 0755 $(DESTDIR)$(MGMT_SALT_STATE_DIR)/_topd
-	@install -d -m 0755 $(DESTDIR)$(MGMT_SALT_PILLAR_DIR)/_topd
+	# Install State and Pillar _tops directories
+	@install -d -m 0755 $(DESTDIR)$(MGMT_SALT_STATE_DIR)/_tops
+	@install -d -m 0755 $(DESTDIR)$(MGMT_SALT_PILLAR_DIR)/_tops

@@ -4,7 +4,7 @@ package-name:       qubes-mgmt-salt-base-topd
 name:               topd-formula
 top_level_dir:      topd
 formula-files:      README.rst LICENSE topd _modules _utils
-pillar-files:
+pillar-files:       pillar
 test-formula-files: 
 test-pillar-files: 
 formula_root:       /srv/salt
@@ -25,4 +25,10 @@ state-tops:
 pillar-tops:
   base:
     enable:
-      - topd
+      - topd.config
+
+conf:
+  topd:
+    topd_dir_name: _tops
+    topd_base_pillar: /srv/pillar
+    topd_base_state: /srv/salt
