@@ -44,17 +44,36 @@ make install DESTDIR=%{buildroot} LIBDIR=%{_libdir} BINDIR=%{_bindir} SBINDIR=%{
 
 %post
 # Update Salt Configuration
-#/usr/bin/salt-call --local state.sls qubes.config -l quiet --out quiet > /dev/null || true
-/usr/bin/salt-call --local saltutil.sync_all -l quiet --out quiet > /dev/null || true
+qubesctl saltutil.clear_cache -l quiet --out quiet > /dev/null || true
+qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 
 # Enable States
 /usr/bin/salt-call --local topd.enable %{state_name} saltenv=%{saltenv} -l quiet --out quiet > /dev/null || true
 
+# Enable Pillars
+/usr/bin/salt-call --local topd.enable %{state_name}.config saltenv=%{saltenv} pillar=true -l quiet --out quiet > /dev/null || true
+
 %files
 %defattr(-,root,root)
-%attr(750, root, root) %dir %{formula_dir}
-%{formula_dir}/*
-%attr(750, root, root) %dir %{state_dir}/_topd
-%attr(750, root, root) %dir %{pillar_dir}/_topd
+%attr(750, root, root) %dir /srv/salt/_modules
+/srv/salt/_modules/topd.py*
+
+%attr(750, root, root) %dir /srv/salt/topd
+/srv/salt/topd/init.conf
+/srv/salt/topd/init.sls
+/srv/salt/topd/init.top
+/srv/salt/topd/LICENSE
+/srv/salt/topd/README.rst
+
+%attr(750, root, root) %dir /srv/salt/_utils
+/srv/salt/_utils/adapt.py*
+/srv/salt/_utils/fileinfo.py*
+/srv/salt/_utils/matcher.py*
+/srv/salt/_utils/pathinfo.py*
+/srv/salt/_utils/pathutils.py*
+/srv/salt/_utils/toputils.py*
+
+%config(noreplace) /srv/pillar/topd/config.sls
+/srv/pillar/topd/config.top
 
 %changelog

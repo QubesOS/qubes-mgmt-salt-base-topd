@@ -33,6 +33,7 @@ import salt.ext.six as six
 from salt.utils import dictupdate
 from salt.exceptions import SaltRenderError
 from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
+from salt.utils.jinja import PrintableDict
 
 # Import custom libs
 import matcher
@@ -139,15 +140,15 @@ class TopUtils(PathUtils):
     def __init__(self, opts, pillar=False, **kwargs):
         super(TopUtils, self).__init__(opts=opts, pillar=pillar, **kwargs)
 
-        # XXX: TODO: Add to salt configuration file
-        self.topd_directory = self.opts.get(u'topd_dir', u'_topd')
+        self.topd_directory = self.opts.get(u'topd_dir', u'_tops')
+        self.verbose = kwargs.get('verbose', False)
 
         if pillar:
-            # XXX: TODO: Add to salt configuration file
             self.topd_base = self.opts.get(u'topd_base_pillar', u'/srv/pillar')
+            include = ['pillar_roots']
         else:
-            # XXX: TODO: Add to salt configuration file
             self.topd_base = self.opts.get(u'topd_base_state', u'/srv/salt')
+            include = ['file_roots']
 
         # All enabled tops pattern
         self.pattern_enable = re.compile(r'{0}{1}*.top'.format(
@@ -162,6 +163,7 @@ class TopUtils(PathUtils):
             (?P<ext>[.]top|)
             '''.format('|'.join(self.saltenvs()), os.sep)))
 
+        self._topinfo_roots = self.pathinfo_roots(include=include)
         self._toplist = self.files()
         self._tops = self.tops()
 
@@ -266,7 +268,7 @@ class TopUtils(PathUtils):
             except SaltRenderError:
                 return ''
 
-        topd_dir = self.opts.get(u'topd_dir', u'_topd')
+        topd_dir = self.topd_directory
         if relpath.startswith(self.topd_directory):
             relpath = relpath.split(self.topd_directory + os.sep)[1]
 
@@ -319,15 +321,11 @@ class TopUtils(PathUtils):
             pass
 
         if files:
+            if saltenv:
+                patterns['saltenv'] = saltenv
             return self.find(files, **patterns)
 
-        if not roots:
-            if self.pillar:
-                include = ['pillar_roots']
-            else:
-                include = ['file_roots']
-
-            roots = self.pathinfo_roots(saltenvs=saltenv, include=include)
+        roots = roots or self._topinfo_roots
 
         # XXX: Let look at ALWAYS returning 'raw'
         #      Same for ALL methods; so remove that feature from ALL methods
@@ -370,7 +368,7 @@ class TopUtils(PathUtils):
                 else:
                     unseen.add(path)
 
-        return seen, unseen
+        return list(seen), list(unseen)
 
     def include_links(self, tops):
         includes = []
@@ -453,50 +451,123 @@ class TopUtils(PathUtils):
         disabled = set(all_tops).difference(enabled)
 
         view = view or ['saltenv', 'abspath']
-        return fileinfo.fileinfo_view(disabled, view=view, flat=flat)
+        return fileinfo.fileinfo_view(list(disabled), view=view, flat=flat)
 
-    def enable(self, paths=None, saltenv=None, view=None, flat=None):
+    def enable(self, paths=None, saltenv='base', view=None, flat=None):
         '''
         '''
-        results = DefaultOrderedDict(list)
+        results = PrintableDict()
         toppaths, unseen = self.prepare_paths(paths)
-
-        if toppaths:
-            tops = self.disabled(paths=toppaths,
-                                 saltenv=saltenv,
-                                 view='raw')
-
-            for topinfo in tops:
-                topdir = os.path.join(self.topd_base,
-                                      self.topd_directory,
-                                      topinfo.saltenv)
-                topfile = topinfo.toppath + '.top'
-                path = os.path.join(topdir, topinfo.toppath)
-                if not os.path.exists(topdir):
-                    os.makedirs(topdir)
-
-                if not os.path.exists(path):
-                    os.symlink(topinfo.abspath, path)
-                    results['enabled'].append(topinfo.toppath)
-                    if topinfo.toppath in toppaths:
-                        toppaths.remove(topinfo.toppath)
-
-        if toppaths:
-            enabled = self.enabled(paths=toppaths,
-                                   saltenv=saltenv,
-                                   view='raw')
-            for topinfo in enabled:
-                results['unchanged'].append(topinfo.toppath)
-                if topinfo.toppath in toppaths:
-                    toppaths.remove(topinfo.toppath)
 
         if unseen:
             for path in unseen:
-                results['error'].append(path)
+                results['error'] = 'Top path not found: {0}'.format(path)
+                log.error(results['error'])
+
+        if not toppaths:
+            message = 'No valid top names provided: {0}'.format(paths)
+            results['error'] = message
+            log.error(results['error'])
+            return results
+
+        # ======================================================================
+        # path preference:
+        # ======================================================================
+        #
+        # System dir
+        # E: Enabled system directory
+        #      - Any top file in a system dir IS enabled AND deletable?
+        # D: Distribution dir
+        #      - tops or sls files provided by formuala author
+        # A: Admin dir
+        #      - Local administrator OVERRIDES
+        # R: Removable
+        # ======================================================================
+        #
+        # EA  /srv/salt/_tops/<saltenv>/topname.top.d/somename.conf
+        # E R /srv/salt/_tops/<saltenv>/topname.top
+        #
+        # EAR /srv/salt/_tops/<saltenv>|top_name.top.d/somename.conf
+        # EAR /srv/salt/_tops/<saltenv>|top_name.top
+        #
+        # E R /srv/salt/_tops/top_name.top.d/somename.conf
+        # EAR /srv/salt/_tops/top_name.top
+        #
+        # D  /srv/salt_or_formula/_tops/top_name.top  -- Dunno if should suppot
+        # D  /srv/salt_or_formula/statedir/top_name.top
+        # D  /srv/salt_or_formula/statedir/top_name.sls
+
+        for toppath in toppaths:
+            # All tops filtered by toppaths
+            tops = self.files(saltenv=saltenv,
+                              view='raw',
+                              toppath=toppath)
+
+            # All disabled tops
+            disabled = self.disabled(files=tops, view='raw')
+
+            # All enabled tops
+            enabled = self.enabled(files=tops, view='raw')
+
+            # XXX: This will change.
+            if enabled:
+                topinfo = enabled[0]
+            elif disabled:
+                topinfo = disabled[0]
+            else:
+                message = 'No valid top names found: {0}'.format(toppath)
+                results[toppath] = message
+                log.error(results[toppath])
+                continue
+
+            topdir = os.path.join(self.topd_base,
+                                  self.topd_directory,
+                                  topinfo.saltenv)
+
+            if not os.path.exists(topdir):
+                os.makedirs(topdir)
+
+            message = PrintableDict()
+            path = os.path.join(topdir, toppath)
+            exists = os.path.exists(path) or os.path.islink(path)
+
+            if topinfo in enabled and os.path.exists(path):
+                message['status'] = 'unchanged'
+
+            elif topinfo in enabled and os.path.islink(path):
+                realpath = os.path.realpath(path)
+                if os.path.islink(path) and not os.path.exists(realpath):
+                    message['error'] = 'Broken link!  Disable state to remove.'
+
+            elif topinfo in disabled and not exists:
+                os.symlink(topinfo.abspath, path)
+                message['status'] = 'enabled'
+
+            else:
+                message['error'] =  'Unknown error'
+
+            if self.verbose or 'error' in message:
+                message['topdir']   = topdir
+                message['toppath']  = toppath
+                message['path']     = path
+                message['topinfo']  = topinfo
+                message['paths']    = paths
+                message['saltenv']  = saltenv
+                message['toppaths'] = toppaths
+                message['unseen']   = unseen
+                message['pillar']   = self.pillar
+                message['roots']    = self._topinfo_roots
+
+            results[toppath] = message
+
+            if 'error' in message:
+                log.error('{0}: {1}'.format(toppath, results[toppath]))
+            else:
+                log.info('{0}: {1}'.format(toppath, results[toppath]))
 
         return results
 
-    def disable(self, paths=None, saltenv=None, view=None, flat=None):
+    def disable(self, paths=None, saltenv='base', view=None, flat=None):
         '''
         '''
         results = DefaultOrderedDict(list)
