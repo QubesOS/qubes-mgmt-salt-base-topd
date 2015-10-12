@@ -105,8 +105,14 @@ class PathUtils(object):
         self.opts = opts
         self.pillar = pillar
 
-        self.client = salt.fileclient.get_file_client(self.opts, self.is_pillar())
-        self.server = salt.fileserver.Fileserver(self.opts)
+        if pillar and not self.is_pillar():
+            opts = dict(opts)
+            opts['file_roots'] = opts['pillar_roots']
+            self.opts = opts
+
+##        self.server = salt.fileserver.Fileserver(self.opts)
+        self.client = salt.fileclient.get_file_client(self.opts,
+                                                      self.is_pillar())
 
         self._states = DefaultOrderedDict(list)
 ##        self._toplist = None
