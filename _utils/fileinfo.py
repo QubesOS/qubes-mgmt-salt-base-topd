@@ -145,6 +145,8 @@ def walk(dirnames, followlinks=True):
     Helper util to return a list of files in a directory
     '''
     for dirname in dirnames:
+        if not os.path.exists(os.path.realpath(dirname)):
+            continue
         if not os.path.isdir(dirname):
             dirname = os.path.dirname(dirname)
 
