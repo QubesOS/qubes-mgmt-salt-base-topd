@@ -636,7 +636,7 @@ class PathUtils(object):
 ##            relpath = self.relpath(path, saltenv)
 ##
 ##        # XXX: Change to self.topd_directory once moved to top_utils
-##        topd_dir = self.opts.get(u'topd_dir', u'_topd')
+##        topd_dir = self.opts.get(u'topd_dir', u'_tops')
 ##        if relpath.startswith(topd_dir):
 ##            relpath = relpath.split(topd_dir)[1]
 ##
