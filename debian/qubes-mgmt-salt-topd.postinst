@@ -24,10 +24,10 @@ case "${1}" in
         qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 
         # Enable States
-        /usr/bin/salt-call --local topd.enable topd saltenv=base -l quiet --out quiet > /dev/null || true
-        
+        /usr/bin/salt-call --local top.enable topd saltenv=base -l quiet --out quiet > /dev/null || true
+
         # Enable Pillar
-        /usr/bin/salt-call --local topd.enable topd.config saltenv=base pillar=true -l quiet --out quiet > /dev/null || true
+        /usr/bin/salt-call --local top.enable topd.config saltenv=base pillar=true -l quiet --out quiet > /dev/null || true
         ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

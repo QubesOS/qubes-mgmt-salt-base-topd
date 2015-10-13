@@ -31,19 +31,19 @@ Developer:
 --local state.highstate
 --local bind.mount modules states utils saltenv=base
 
---no-color --local topd.debug
---no-color --local topd.report
---no-color --local topd.enabled
---no-color --local topd.status
+--no-color --local top.debug
+--no-color --local top.report
+--no-color --local top.enabled
+--no-color --local top.status
 
 Now:
---local topd.is_enabled topd.base|salt.directories topd.dev|bind
+--local top.is_enabled topd.base|salt.directories topd.dev|bind
 
 Should be:
-    --local topd.is_enabled base|salt.directories dev|bind
+    --local top.is_enabled base|salt.directories dev|bind
 Or:
-    --local topd.is_enabled salt.directories test
-    --local topd.is_enabled bind saltenv=dev
+    --local top.is_enabled salt.directories test
+    --local top.is_enabled bind saltenv=dev
 '''
 
 
@@ -87,7 +87,7 @@ from toputils import TopUtils
 log = logging.getLogger(__name__)
 
 try:
-    __context__['salt.loaded.ext.module.topd'] = True
+    __context__['salt.loaded.ext.module.top'] = True
 except NameError:
     __context__ = {}
 
@@ -99,7 +99,7 @@ except NameError:
 ##FILE_ROOTS = 'file-roots'
 
 # Define the module's virtual name
-__virtualname__ = 'topd'
+__virtualname__ = 'top'
 
 
 def __virtual__():

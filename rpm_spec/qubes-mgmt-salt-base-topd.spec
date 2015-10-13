@@ -48,10 +48,10 @@ qubesctl saltutil.clear_cache -l quiet --out quiet > /dev/null || true
 qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 
 # Enable States
-/usr/bin/salt-call --local topd.enable %{state_name} saltenv=%{saltenv} -l quiet --out quiet > /dev/null || true
+/usr/bin/salt-call --local top.enable %{state_name} saltenv=%{saltenv} -l quiet --out quiet > /dev/null || true
 
 # Enable Pillars
-/usr/bin/salt-call --local topd.enable %{state_name}.config saltenv=%{saltenv} pillar=true -l quiet --out quiet > /dev/null || true
+/usr/bin/salt-call --local top.enable %{state_name}.config saltenv=%{saltenv} pillar=true -l quiet --out quiet > /dev/null || true
 
 %files
 %defattr(-,root,root)
