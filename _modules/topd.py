@@ -6,81 +6,26 @@
 :maturity:      new
 :depends:       none
 :platform:      all
-
-Formula Plugin to manage formulas.
 '''
-
-'''
-- Maybe what we will do is soft-link config files to salt-config/formulas/SALTENV
-  and use that location for parsing file?
-  - Not sure if that is needed though
-  - Need to consider though that this should work with a salt-master;
-    so accessing files in /formulas dir will need a client-cache?
-
-- Hrmm, maybe just load all the config files as pillar data; Once that is
-  done once; it can be accessed by this and other modules much easier...
-  - For instance; include complete file_roots, pillar roots, and then
-    just receive from pillar data!
-
-- So each function will call load first, or have some way... maybe via
-  virtual() that will pre-load stuff... beware it may not get loaded b4
-  pillars load though, so may need load
-'''
-'''
-Developer:
---local state.highstate
---local bind.mount modules states utils saltenv=base
-
---no-color --local top.debug
---no-color --local top.report
---no-color --local top.enabled
---no-color --local top.status
-
-Now:
---local top.is_enabled topd.base|salt.directories topd.dev|bind
-
-Should be:
-    --local top.is_enabled base|salt.directories dev|bind
-Or:
-    --local top.is_enabled salt.directories test
-    --local top.is_enabled bind saltenv=dev
-'''
-
 
 # Import python libs
-#import collections
-import copy
 import fnmatch
-import functools
-import itertools
 import logging
-import os
 
 # Import salt libs
-import salt.loader
-import salt.fileclient
-import salt.template
-import salt.pillar
-#import salt.utils
-#import StringIO
-
-# XXX: convert items to six
 import salt.ext.six as six
+import salt.fileclient
+import salt.loader
+import salt.template
+import salt.version
 
-#from salt.template import compile_template
-#from salt.state import BaseHighState, State
 from salt.exceptions import SaltRenderError
-
 from salt.utils.odict import (
     OrderedDict,
     DefaultOrderedDict
     )
 
 # Import custom libs
-#import salt_path_utils as path_utils
-import fileinfo
-import matcher
-from pathutils import PathUtils
 from toputils import TopUtils
 
 # Enable logging
@@ -91,15 +36,9 @@ try:
 except NameError:
     __context__ = {}
 
-##ENABLE_UNKNOWN = False
-##DEFAULT_PILLAR_DIR = '/srv/pillar'
-##DEFAULT_FILE_DIR = '/srv/salt'
-##SALT_CONFIG_DIR = '/srv/pillar/salt-config'
-##PILLAR_ROOTS = 'pillar-roots'
-##FILE_ROOTS = 'file-roots'
-
 # Define the module's virtual name
 __virtualname__ = 'top'
+version = salt.version.__saltstack_version__
 
 
 def __virtual__():
@@ -108,148 +47,10 @@ def __virtual__():
     return __virtualname__
 
 
-##def get_formula_dirs(env=None):
-##    formula_dirs = {}
-##    git_opts = __salt__['pillar.get']('salt_formulas:git_opts',  {})
-##    for saltenv, items in git_opts.items():
-##        if not env or env == saltenv:
-##            formula_dirs[saltenv] = items.get('basedir', None)
-##    return formula_dirs
-
-
-##def formula_basedirs(env=None):
-##    basedirs = {}
-##    git_opts = __salt__['pillar.get']('salt_formulas:git_opts',  {})
-##    for saltenv, items in git_opts.items():
-##        if not env or env == saltenv:
-##            basedirs[saltenv] = items.get('basedir', None)
-##    return basedirs
-
-def coerce_to_list(value):
-    '''Converts value to a list.
-    '''
-    if not value:
-        value = []
-    elif isinstance(value, str):
-        value = [value,]
-    elif isinstance(value, tuple):
-        value = list(value)
-    return value
-
-def get_opts(opts=None):
-    if not opts:
-        opts = __opts__
-    return opts
-
-
-def is_pillar(opts=None):
-    opts = get_opts(opts)
-    return True if opts['file_roots'] is opts['pillar_roots'] else False
-
-
-def get_renderers(opts=None):
-    if 'renderers' in __context__:
-        return __context__['renderers']
-
-    opts = get_opts(opts)
-    renderers = salt.loader.render(opts, salt.loader.minion_mods(opts))
-    __context__['renderers'] = renderers
-    return renderers
-
-
-def get_fileclient(opts=None):
-    if 'fileclient' in __context__:
-        return __context__['fileclient']
-
-    opts = get_opts(opts)
-    fileclient = salt.fileclient.get_file_client(opts, is_pillar(opts))
-    __context__['fileclient'] = fileclient
-    return fileclient
-
-
-def get_environment(opts=None):
-    opts = get_opts(opts)
-    if is_pillar(opts):
-        return 'pillarenv'
-    else:
-        return 'environment'
-
-
-def get_pillar(opts=None):
-    '''
-    Getting the pillar will set file_roots to pillar_roots to allow jinja
-    search path to find includes within pillar directory
-    '''
-    if 'pillar' in __context__:
-        return __context__['pillar']
-
-    opts = get_opts(opts)
-    pillar = salt.pillar.get_pillar(
-        opts,
-        __grains__,
-        opts['id'],
-        opts[get_environment(opts)],
-    )
-    __context__['pillar'] = pillar
-    return pillar
-
-
-##def load_config():
-##    pass
-##    #    __salt__['file.find'](path=path, name='config.sls', maxdepth=1)
-
-
-##def enabled(path, saltenv=None, default=ENABLE_UNKNOWN):
-##    '''
-##    If a config.sls file does not exist, use default.
-##    '''
-##    config = os.path.join(path, 'config.sls')
-##    if os.path.exists(config):
-##        salt_data = _render(config, saltenv=saltenv or 'base')[0]
-##        if 'enable' in salt_data:
-##            return salt_data['enable']
-##    return default
-
-
-
 def toputils():
     return TopUtils(__opts__)
 
-'''
-create -- create from existing tops
-status -- include states iwthout tops files?
-filter add/remove/list  -- custom override filters -- pillar dir?
 
-create a state to implement tops files; can be pillar based?
-topd    base topd dir; overrides go here; named saltenv|statename
-  base  enabed - links to existing tops; or auto created
-  all
-  vm
-'''
-def debug(*varargs, **kwargs):
-    '''
-    XXX: Remove me
-    Debug function used to call and test various functions.
-    '''
-    pathutils = PathUtils(__opts__)
-    toputils = TopUtils(__opts__)
-    tops = toputils.tops()
-
-    #info = pathutils.report(tops)
-
-    info = pathutils.salt_path(tops)
-
-    return info
-
-
-#def get(*varargs, **kwargs):
-#    paths = kwargs.get('paths', varargs)
-#    saltenv = kwargs.get('saltenv', None)
-#    return TopUtils(__opts__).get(paths, saltenv)
-
-
-# XXX:
-# Missing salt states?  Only pillar shown?
 def enabled(*varargs, **kwargs):
     paths = kwargs.get('paths', varargs)
     saltenv = kwargs.get('saltenv', None)
@@ -299,6 +100,48 @@ def status(*varargs, **kwargs):
     else:
         return TopUtils(__opts__, **kwargs).report()
 
+
+def get_opts(opts=None):
+    if not opts:
+        opts = __opts__
+    return opts
+
+
+def is_pillar(opts=None):
+    opts = get_opts(opts)
+    return True if opts['file_roots'] is opts['pillar_roots'] else False
+
+
+def get_renderers(opts=None):
+    if 'renderers' in __context__:
+        return __context__['renderers']
+
+    opts = get_opts(opts)
+    renderers = salt.loader.render(opts, salt.loader.minion_mods(opts))
+
+    # For salt versions less than 2015.8
+    if version.info < (2015, 8, 0, 0):
+        jinja = renderers.get('jinja', None)
+        if jinja and not jinja.func_globals.get('__grains__', None):
+            jinja.func_globals['__grains__'] = __grains__
+
+    __context__['renderers'] = renderers
+    return renderers
+
+
+def get_fileclient(opts=None):
+    opts = get_opts(opts)
+    return salt.fileclient.get_file_client(opts, is_pillar(opts))
+
+
+def get_environment(opts=None):
+    opts = get_opts(opts)
+    if is_pillar(opts):
+        return 'pillarenv'
+    else:
+        return 'environment'
+
+
 def get_envs(opts=None):
     '''
     Pull the file server environments out of the master options
@@ -310,28 +153,14 @@ def get_envs(opts=None):
     return envs
 
 
-##def gather_avail(opts=None):
-##    '''
-##    Gather the lists of available sls data from the master
-##    '''
-##    avail = {}
-##    opts = get_opts(opts)
-##    client = get_fileclient(opts)
-##
-##    for saltenv in get_envs(opts):
-##        avail[saltenv] = client.list_states(saltenv)
-##    return avail
-
-
 def render(path, opts=None, saltenv='base', sls=''):
     opts = get_opts(opts)
-
-    renderers = get_renderers(opts)
     client = get_fileclient(opts)
-    #pillar = get_pillar(opts)
-
     template = client.cache_file(path, saltenv)
+
     if template:
+        renderers = get_renderers(opts)
+
         salt_data = salt.template.compile_template(
                 template,
                 renderers,
@@ -344,7 +173,6 @@ def render(path, opts=None, saltenv='base', sls=''):
     return OrderedDict()
 
 
-# XXX: Look at passing pathutils since it loads with each pass
 def render_top(opts, toputils):
     '''
     Gather the top files
@@ -364,7 +192,7 @@ def render_top(opts, toputils):
                 'configuration option was set')
         opts[environment] = opts['default_top']
 
-    if opts[environment]:
+    if opts.get(environment, None):
         salt_data = render(opts['state_top'],
                            opts=opts,
                            saltenv=opts[environment])
@@ -425,8 +253,6 @@ def render_top(opts, toputils):
     return tops
 
 
-# XXX: Look at only including pillar_roots?;
-#      See if there are ever any cache_roots
 def merge_tops(tops):
     '''
     Cleanly merge the top files
@@ -472,10 +298,9 @@ def get_top(path, opts=None, saltenv='base'):
     '''
     Returns all merged tops from path.
     '''
-    tops = []
-
-    #opts = copy.deepcopy(get_opts(opts))
+    #opts = dict(get_opts(opts))
     opts = get_opts(opts)
+    tops = []
 
     toputils = TopUtils(opts, pillar=is_pillar(opts))
     enabled = toputils.enabled(saltenv=saltenv, view='raw')
