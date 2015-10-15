@@ -13,5 +13,6 @@ Section: admin
 Architecture: all
 Depends:
     salt-common,
-    qubes-mgmt-salt-config
+    qubes-mgmt-salt-config,
+    qubes-mgmt-salt-base-overrides
 Description: Salt top module plugin that allows top drop-ins

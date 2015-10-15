@@ -23,6 +23,7 @@ BuildArch: noarch
 Requires:  salt
 Requires:  salt-minion
 Requires:  qubes-mgmt-salt-config
+Requires:  qubes-mgmt-salt-base-overrides
 Requires(post): /usr/bin/salt-call
 
 %define _builddir %(pwd)
