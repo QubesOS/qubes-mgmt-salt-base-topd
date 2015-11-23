@@ -1,20 +1,10 @@
-%{!?version: %define version %(make get-version)}
-%{!?rel: %define rel %(make get-release)}
-%{!?package_name: %define package_name %(make get-package_name)}
-%{!?package_summary: %define package_summary %(make get-summary)}
-%{!?package_description: %define package_description %(make get-description)}
-
-%{!?formula_name: %define formula_name %(make get-formula_name)}
-%{!?state_name: %define state_name %(make get-state_name)}
-%{!?saltenv: %define saltenv %(make get-saltenv)}
-%{!?state_dir: %define state_dir %(make get-salt_state_dir)}
-%{!?pillar_dir: %define pillar_dir %(make get-pillar_dir)}
-%{!?formula_dir: %define formula_dir %(make get-formula_dir)}
+%{!?version: %define version %(cat version)}
+%{!?rel: %define rel %(cat rel)}
 
 Name:      qubes-mgmt-salt-base-topd
 Version:   %{version}
 Release:   %{rel}%{?dist}
-Summary:   %{package_summary}
+Summary:   Salt top module plugin that allows top drop-ins
 License:   GPL 2.0
 URL:	   http://www.qubes-os.org/
 
@@ -30,7 +20,7 @@ Requires(post): /usr/bin/salt-call
 %define _builddir %(pwd)
 
 %description
-%{package_description}
+Salt top module plugin that allows top drop-ins
 
 %prep
 # we operate on the current directory, so no need to unpack anything
@@ -50,10 +40,10 @@ qubesctl saltutil.clear_cache -l quiet --out quiet > /dev/null || true
 qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 
 # Enable States
-/usr/bin/salt-call --local top.enable %{state_name} saltenv=%{saltenv} -l quiet --out quiet > /dev/null || true
+/usr/bin/salt-call --local top.enable topd saltenv=base -l quiet --out quiet > /dev/null || true
 
 # Enable Pillars
-/usr/bin/salt-call --local top.enable %{state_name}.config saltenv=%{saltenv} pillar=true -l quiet --out quiet > /dev/null || true
+/usr/bin/salt-call --local top.enable topd.config saltenv=base pillar=true -l quiet --out quiet > /dev/null || true
 
 %files
 %defattr(-,root,root)
