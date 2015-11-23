@@ -3,11 +3,12 @@
 package-name:       qubes-mgmt-salt-base-topd
 name:               topd-formula
 top_level_dir:      topd
-formula-files:      README.rst LICENSE topd _modules _utils
+formula-files:      topd _modules _utils
 pillar-files:       pillar
 test-formula-files: 
 test-pillar-files: 
-formula_root:       /srv/salt
+formula_dir:        /srv/salt
+pillar_dir:         /srv/pillar
 saltenv:            base
 version:            3.0.0
 release:            1
