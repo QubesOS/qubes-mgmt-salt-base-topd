@@ -1,9 +1,8 @@
 %{!?version: %define version %(cat version)}
-%{!?rel: %define rel %(cat rel)}
 
 Name:      qubes-mgmt-salt-base-topd
 Version:   %{version}
-Release:   %{rel}%{?dist}
+Release:   1%{?dist}
 Summary:   Salt top module plugin that allows top drop-ins
 License:   GPL 2.0
 URL:	   http://www.qubes-os.org/
