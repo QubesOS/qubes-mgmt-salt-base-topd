@@ -7,7 +7,7 @@
 :depends:       none
 :platform:      all
 
-Very simple adapter pattern loosly based on zope.interface
+Very simple adapter pattern loosely based on zope.interface
 
     >>> import collections
     >>> FIELDS = ('root', 'abspath', 'relpath')
@@ -46,7 +46,7 @@ Test function factories
 Test class factories
 
     >>> @adapter(FileInfoTuple, IRootpath)
-    ... class Rootpath_NamedTuple(object):
+    ... class RootPathNamedTuple(object):
     ...     def __init__(self, context):
     ...         self.context = context
     ...
@@ -54,7 +54,7 @@ Test class factories
     ...         return self.context.root
 
     >>> @adapter(collections.Mapping, IRootpath)
-    ... class Rootpath_Mapping(object):
+    ... class RootPathMapping(object):
     ...     def __init__(self, context):
     ...         self.context = context
     ...
@@ -62,7 +62,7 @@ Test class factories
     ...         return self.context['root']
 
     >>> @adapter(six.string_types, IRootpath)
-    ... class Rootpath_Text(object):
+    ... class RootPathText(object):
     ...     def __init__(self, context):
     ...         self.context = context
     ...
@@ -79,9 +79,9 @@ above:
     >>> registry.register(FileInfoTuple, IRelpath, '', relpath_namedtuple)
     >>> registry.register(collections.Mapping, IRelpath, '', relpath_mapping)
     >>> registry.register(six.string_types, IRelpath, '', relpath_text)
-    >>> registry.register(FileInfoTuple, IRootpath, '', Rootpath_NamedTuple)
-    >>> registry.register(collections.Mapping, IRootpath, '', Rootpath_Mapping)
-    >>> registry.register(six.string_types, IRootpath, '', Rootpath_Text)
+    >>> registry.register(FileInfoTuple, IRootpath, '', RootPathNamedTuple)
+    >>> registry.register(collections.Mapping, IRootpath, '', RootPathMapping)
+    >>> registry.register(six.string_types, IRootpath, '', RootPathText)
 
     # Create a fileinfo objects of different types to use for adaption
     >>> fileinfo_tuple = FileInfoTuple(*fileinfo)
@@ -100,13 +100,13 @@ Query adapter
     'top.sls'
 
     >>> registry.queryAdapter(fileinfo_tuple, IRootpath) #doctest: +ELLIPSIS
-    <__main__.Rootpath_NamedTuple object at 0x...>
+    <__main__.RootPathNamedTuple object at 0x...>
 
     >>> registry.queryAdapter(fileinfo_mapping, IRootpath)  #doctest: +ELLIPSIS
-    <__main__.Rootpath_Mapping object at 0x...>
+    <__main__.RootPathMapping object at 0x...>
 
     >>> registry.queryAdapter(fileinfo_rootpath, IRootpath)  #doctest: +ELLIPSIS
-    <__main__.Rootpath_Text object at 0x...>
+    <__main__.RootPathText object at 0x...>
 
 Adapt adapter
 =============
@@ -119,13 +119,13 @@ Adapt adapter
     'top.sls'
 
     >>> adapt(IRootpath, fileinfo_tuple)  #doctest: +ELLIPSIS
-    <__main__.Rootpath_NamedTuple object at 0x...>
+    <__main__.RootPathNamedTuple object at 0x...>
 
     >>> adapt(IRootpath, fileinfo_mapping)  #doctest: +ELLIPSIS
-    <__main__.Rootpath_Mapping object at 0x...>
+    <__main__.RootPathMapping object at 0x...>
 
     >>> adapt(IRootpath, fileinfo_rootpath)  #doctest: +ELLIPSIS
-    <__main__.Rootpath_Text object at 0x...>
+    <__main__.RootPathText object at 0x...>
 
 Adapt using Interface
 =====================
@@ -138,24 +138,22 @@ Adapt using Interface
     'top.sls'
 
     >>> IRootpath(fileinfo_tuple)  #doctest: +ELLIPSIS
-    <__main__.Rootpath_NamedTuple object at 0x...>
+    <__main__.RootPathNamedTuple object at 0x...>
 
     >>> IRootpath(fileinfo_mapping)  #doctest: +ELLIPSIS
-    <__main__.Rootpath_Mapping object at 0x...>
+    <__main__.RootPathMapping object at 0x...>
 
     >>> IRootpath(fileinfo_rootpath)  #doctest: +ELLIPSIS
-    <__main__.Rootpath_Text object at 0x...>
+    <__main__.RootPathText object at 0x...>
 
 '''
+
+from __future__ import absolute_import
 
 # Import python libs
 import collections
 import logging
-
-# Import salt libs
-import salt.ext.six as six
-
-from salt.utils.odict import OrderedDict
+import sys
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -186,52 +184,63 @@ class AdapterRegistry(object):
         if not self._instance:
             pass
 
+    # noinspection PyMethodParameters
     @property
-    def registry(cls):
+    def registry(cls):  # pylint: disable=E0213
         return cls._registry
 
     @classmethod
-    def register(cls, object_type, provided, name, factory):
+    def register(
+        cls, object_type, provided, name, factory
+    ):  # pylint: disable=W0613
         pattern = (object_type, provided, factory)
         if pattern not in cls._registry:
             cls._registry.append(pattern)
 
     @classmethod
-    def unregister(cls, object_type, provided, name, factory):
+    def unregister(
+        cls, object_type, provided, name, factory
+    ):  # pylint: disable=W0613
         cls._registry.remove((object_type, provided, factory))
 
-    def __new__(cls, *p, **k):
-        if not '_instance' in cls.__dict__:
-            cls._instance = object.__new__(cls, *p, **k)
+    def __new__(cls, *p, **k):  # pylint: disable=W0613
+        if '_instance' not in cls.__dict__:
+            cls._instance = object.__new__(cls, *p)
         return cls._instance
 
-    def _check(self, object, class_or_type_or_subclass):
+    @staticmethod
+    def _check(_object, class_or_type_or_subclass):
         types = to_tuple(class_or_type_or_subclass)
         for _type in types:
             try:
-                if isinstance(object, _type):
+                if isinstance(_object, _type):
                     yield True
                     continue
             except TypeError:
                 try:
-                    if issubclass(object, _type):
+                    if issubclass(_object, _type):
                         yield True
                         continue
                 except TypeError:
                     try:
-                        if isinstance(object, type(_type)):
+                        if isinstance(_object, type(_type)):
                             yield True
                             continue
                     except TypeError:
                         pass
             yield False
 
-    def queryAdapter(self, object, provided, name=None, default=None):
+    def queryAdapter(
+        self,
+        _object,
+        provided,
+        name=None,
+        default=None
+    ):  # pylint: disable=W0613
         for required, _provided, factory in self.registry:
-            if all(self._check(object, required)):
-                #if all(self._check(provided, _provided)):
+            if all(self._check(_object, required)):
                 if provided == _provided:
-                    return factory(object)
+                    return factory(_object)
         return None
 
 
@@ -243,7 +252,7 @@ class InterfaceClass(object):
         attrs=None,
         __doc__=None,
         __module__=None
-    ):
+    ):  # pylint: disable=W0622
 
         if attrs is None:
             attrs = {}
@@ -257,13 +266,15 @@ class InterfaceClass(object):
                     # Figure out what module defined the Interface.
                     # This is how cPython figures out the module of
                     # a class, but of course it does it in C. :-/
-                    __module__ = sys._getframe(1).f_globals['__name__']
-                except (AttributeError, KeyError):  #pragma NO COVERAGE
+                    # noinspection PyProtectedMember
+                    __module__ = sys._getframe(1).f_globals[
+                        '__name__'
+                    ]  # pylint: disable=W0212
+                except (AttributeError, KeyError):  # pragma NO COVERAGE
                     pass
 
         d = attrs.get('__doc__')
         if d is not None:
-            #if not isinstance(d, Attribute):
             if __doc__ is None:
                 __doc__ = d
             del attrs['__doc__']
@@ -278,7 +289,7 @@ class InterfaceClass(object):
         self.__name__ = name
         self.__doc__ = __doc__
         self.__module__ = __module__
-        self.__identifier__ = "%s.%s" % (self.__module__, self.__name__)
+        self.__identifier__ = '{0}.{1}'.format(self.__module__, self.__name__)
 
     def __repr__(self):
         try:
@@ -287,13 +298,13 @@ class InterfaceClass(object):
             name = self.__name__
             m = self.__module__
             if m:
-                name = '%s.%s' % (m, name)
-            r = "<%s %s>" % (self.__class__.__name__, name)
-            self._v_repr = r
+                name = '{0}.{1}'.format(m, name)
+            r = '<{0} {1}>'.format(self.__class__.__name__, name)
+            self._v_repr = r  # pylint: disable=W0201
             return r
 
-    def __call__(self, object):
-        return registry.queryAdapter(object, self)
+    def __call__(self, _object):
+        return registry.queryAdapter(_object, self)
 
 
 def to_tuple(value):
@@ -302,18 +313,19 @@ def to_tuple(value):
     return value
 
 
-def adapter(required, provided, name=''):
+def adapter(required, provided, name=''):  # pylint: disable=W0613
     '''
     Decorator to register an adapter
 
-    required:
-        Required object class(es), type(s), or subclass(es)
+    Args:
+        required:
+            Required object class(es), type(s), or subclass(es)
 
-    provided:
-        Provided adapter Interface
+        provided:
+            Provided adapter Interface
 
-    name:
-        Name adapter, default is unnamed adapter
+        name:
+            Name adapter, default is unnamed adapter
 
     Example:
         @adapter((collections.Mapping,), IRelpath, '')
@@ -323,19 +335,23 @@ def adapter(required, provided, name=''):
         registry.register(to_tuple(required), provided, '', factory)
 
         def wrapped_function(*args, **kwargs):
-            function(*args, **kwargs)
+            factory(*args, **kwargs)
 
         return wrapped_function
 
     return wrap
 
 
-def adapt(provided, object):
+def adapt(provided, _object):
     '''
     Allows adapting using IInterfaceName(object) for single adapters.
+
+    Args:
+        provided:
+        _object:
     '''
     try:
-        return registry.queryAdapter(object, provided)
+        return registry.queryAdapter(_object, provided)
     except TypeError:
         raise AdaptationError
 
@@ -344,6 +360,6 @@ Interface = InterfaceClass('Interface', __module__='adapt')
 registry = AdapterRegistry()
 queryAdapter = registry.queryAdapter
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import doctest
     doctest.testmod()
