@@ -46,21 +46,14 @@ Filter:
     by env and/or pattern
 '''
 
-
 # Import python libs
 import collections
 import copy
 import logging
 import os
 
-from functools import  update_wrapper
-from itertools import (
-    chain,
-    ifilter,
-    imap,
-    product,
-    starmap,
-    )
+from functools import update_wrapper
+from itertools import (chain, ifilter, imap, product, starmap, )
 
 # Import salt libs
 import salt.fileclient
@@ -68,10 +61,7 @@ import salt.ext.six as six
 
 from salt.utils import dictupdate
 from salt.exceptions import SaltRenderError
-from salt.utils.odict import (
-    OrderedDict,
-    DefaultOrderedDict
-    )
+from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
 
 # Import custom libs
 import matcher
@@ -101,6 +91,7 @@ class PathUtils(object):
     '''
     Mapping and various utility functions for salt paths.
     '''
+
     def __init__(self, opts, pillar=False, *varargs, **kwargs):
         self.opts = opts
         self.pillar = pillar
@@ -111,11 +102,12 @@ class PathUtils(object):
             self.opts = opts
 
 ##        self.server = salt.fileserver.Fileserver(self.opts)
-        self.client = salt.fileclient.get_file_client(self.opts,
-                                                      self.is_pillar())
+        self.client = salt.fileclient.get_file_client(
+            self.opts, self.is_pillar()
+        )
 
         self._states = DefaultOrderedDict(list)
-##        self._toplist = None
+        ##        self._toplist = None
         self._saltenvs = self.client.envs()
 
     def saltenv(self, path, saltenv=None):
@@ -177,19 +169,25 @@ class PathUtils(object):
         roots = set()
 
         Roots = collections.namedtuple('Roots', 'saltenv root')
+
         def to_named_tuple(element):
-            return  list(Roots(saltenv, root)
-                         for saltenv, roots in six.iteritems(element)
-                         for root in roots
-                         if saltenv in saltenvs)
+            return list(
+                Roots(saltenv, root)
+                for saltenv, roots in six.iteritems(element) for root in roots
+                if saltenv in saltenvs
+            )
 
         if 'cache_roots' in include:
-            roots.update(set(starmap(
-                lambda *x: Roots(x[-1], os.path.join(*x)),
-                product(
-                    [self.opts['cachedir']],
-                    ['files', 'localfiles'],
-                    saltenvs))))
+            roots.update(
+                set(
+                    starmap(
+                        lambda *x: Roots(x[-1], os.path.join(*x)), product(
+                            [self.opts['cachedir']], ['files', 'localfiles'],
+                            saltenvs
+                        )
+                    )
+                )
+            )
 
         if 'file_roots' in include:
             roots.update(to_named_tuple(self.opts['file_roots']))
@@ -199,15 +197,17 @@ class PathUtils(object):
 
         return fileinfo.reduceby('saltenv', 'root', roots)
 
-    def files(self,
-              saltenv=None,
-              roots=None,
-              view=None,
-              files=None,
-              flat=None,
-##              fileinfo_extra=None,
-              pathinfo=None,
-              **patterns):
+    def files(
+        self,
+        saltenv=None,
+        roots=None,
+        view=None,
+        files=None,
+        flat=None,
+        ##              fileinfo_extra=None,
+        pathinfo=None,
+        **patterns
+    ):
         '''
         Return a list of the files in the file server's specified environment
         or a dictionary of all results if saltenv is None.
@@ -432,7 +432,11 @@ class PathUtils(object):
         try:
             saltenv = saltenv or self.saltenv(path, saltenv)
             url = salt.utils.urlparse(path)
-            if not salt.utils.url.validate(path, ['']) or os.path.isabs(url.path):
+            if not salt.utils.url.validate(
+                path, [
+                    ''
+                ]
+            ) or os.path.isabs(url.path):
                 return False
             return not self.is_slspath(url.path, saltenv)
         except AttributeError:
@@ -486,9 +490,7 @@ class PathUtils(object):
         '''
         cache_dir: '/var/cache/salt/minion/files/base'
         '''
-        return salt.utils.path_join(self.opts['cachedir'],
-                                    'files',
-                                    saltenv)
+        return salt.utils.path_join(self.opts['cachedir'], 'files', saltenv)
 
     def is_cache_path(self, path):
         '''
@@ -499,12 +501,14 @@ class PathUtils(object):
         #    return False
         try:
             return os.path.commonprefix(
-                [self.get(path, 'abspath'), self.opts['cachedir']]) == self.opts['cachedir']
+                [self.get(path, 'abspath'), self.opts['cachedir']]
+            ) == self.opts['cachedir']
         except AttributeError:
             if salt.utils.url.validate(path, ['', 'file']):
                 url = salt.utils.urlparse(path)
                 return os.path.commonprefix(
-                    [url.path, self.opts['cachedir']]) == self.opts['cachedir']
+                    [url.path, self.opts['cachedir']]
+                ) == self.opts['cachedir']
         return False
 
     def cache_path(self, path, saltenv=None):
@@ -580,9 +584,17 @@ class PathUtils(object):
         #    if path in self.states(env):
         #        return True
         #return False
-        return bool(set(ifilter(
-            lambda x: x==path,
-            chain.from_iterable(six.itervalues(self.states())))))
+        return bool(
+            set(
+                ifilter(
+                    lambda x: x == path, chain.from_iterable(
+                        six.itervalues(
+                            self.states()
+                        )
+                    )
+                )
+            )
+        )
 
     def slspath(self, path, saltenv=None):
         '''
@@ -663,6 +675,7 @@ class PathUtils(object):
         # XXX: Need to determine which one to return if more than one???
         roots = set(imap(lambda s: s.root, files))
         return sorted(roots)
+
 
 def pathutils(opts, *varargs, **kwargs):
     return PathUtils(opts, *varargs, **kwargs)
