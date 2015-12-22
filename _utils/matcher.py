@@ -60,11 +60,7 @@ import logging
 import operator
 import re
 
-from itertools import (
-    chain,
-    compress,
-    imap,
-    )
+from itertools import (chain, compress, imap, )
 
 # Import salt libs
 import salt.ext.six as six
@@ -179,7 +175,7 @@ def translate(pattern):
     res = ''
     while i < n:
         c = pattern[i]
-        i = i+1
+        i = i + 1
         if c == '*':
             res = res + '.*'
         elif c == '?':
@@ -187,16 +183,16 @@ def translate(pattern):
         elif c == '[':
             j = i
             if j < n and pattern[j] == '!':
-                j = j+1
+                j = j + 1
             if j < n and pattern[j] == ']':
-                j = j+1
+                j = j + 1
             while j < n and pattern[j] != ']':
-                j = j+1
+                j = j + 1
             if j >= n:
                 res = res + '\\['
             else:
-                stuff = pattern[i:j].replace('\\','\\\\')
-                i = j+1
+                stuff = pattern[i:j].replace('\\', '\\\\')
+                i = j + 1
                 if stuff[0] == '!':
                     stuff = '^' + stuff[1:]
                 elif stuff[0] == '^':
@@ -249,10 +245,10 @@ def compile(labels, **patterns):
             #raise SaltInvocationError(
             #    'Invalid pattern key: {0}'.format(pattern))
 
-##    # XXX: Maybe allow if new translate works
-##    #
-##    # Do not allow glob pattern matching on multi-field matches
-##    regex = True if len(labels) > 1 else regex
+            ##    # XXX: Maybe allow if new translate works
+            ##    #
+            ##    # Do not allow glob pattern matching on multi-field matches
+            ##    regex = True if len(labels) > 1 else regex
 
     default_pattern = get_default_pattern(regex)
     escape = escape if escape else []
@@ -274,8 +270,9 @@ def compile(labels, **patterns):
         pattern[label] = r'(?:{0})'.format(r'|'.join(field))
 
     try:
-        return re.compile(r'\n'.join(six.itervalues(pattern)),
-                             re.MULTILINE|re.DOTALL)
+        return re.compile(
+            r'\n'.join(six.itervalues(pattern)), re.MULTILINE | re.DOTALL
+        )
     except NameError:
         raise
 
@@ -317,15 +314,18 @@ def match(sequence, pattern):
 #      - TEST by escaping everything thats not already a regex expression?
 #      - Switch to regex=False if new translate works
 
+
 def get_pattern(sequence=None, *ignored, **patterns):
     if '_pattern' in patterns:
         return patterns['_pattern']
     labels = extract_labels(sequence)
     return compile(labels, **patterns)
 
+
 def ifilter(sequence, **patterns):
     pattern = get_pattern(*sequence, **patterns)
     return compress(sequence, match(sequence, pattern))
+
 
 def filter(sequence, **patterns):
     return list(ifilter(sequence, **patterns))
