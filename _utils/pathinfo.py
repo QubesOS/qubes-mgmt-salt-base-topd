@@ -17,13 +17,7 @@ import collections
 import logging
 import os
 
-from itertools import (
-    chain,
-    ifilter,
-    imap,
-    product,
-    starmap,
-    )
+from itertools import (chain, ifilter, imap, product, starmap, )
 
 # Import salt libs
 import salt.fileclient
@@ -45,8 +39,9 @@ try:
 except NameError:
     __context__ = {}
 
-PATHINFO_FIELDS = ('saltenv', 'file_root', 'cache_root', 'abspath', 'relpath',
-                   'is_pillar')
+PATHINFO_FIELDS = (
+    'saltenv', 'file_root', 'cache_root', 'abspath', 'relpath', 'is_pillar'
+)
 
 # Define the module's virtual name
 __virtualname__ = 'pathinfo'
@@ -72,9 +67,11 @@ class PathInfo(fileinfo.FileInfo):
             Example:
                 { 'saltenv': 'base', 'relpath': ['*.sls'] }
         '''
-        super(PathInfo, self).__init__(fields=PATHINFO_FIELDS,
-                                       match_each=match_each,
-                                       **patterns)
+        super(PathInfo, self).__init__(
+            fields=PATHINFO_FIELDS,
+            match_each=match_each,
+            **patterns
+        )
 
     def element(self, root=None, abspath=None, **kwargs):
         '''
@@ -141,16 +138,22 @@ class PathInfoDict(fileinfo.FileInfo):
             Example:
                 { 'saltenv': 'base', 'relpath': ['*.sls'] }
         '''
-        super(PathInfoDict, self).__init__(fields=PATHINFO_FIELDS,
-                                           match_each=match_each,
-                                           **patterns)
+        super(PathInfoDict, self).__init__(
+            fields=PATHINFO_FIELDS,
+            match_each=match_each,
+            **patterns
+        )
         self._elements = OrderedDict()
 
     @property
     def as_sequence(self):
         if self.pattern and not self.match_each:
-            return list(matcher.ifilter(self._elements.values(),
-                                        _pattern=pattern))
+            return list(
+                matcher.ifilter(
+                    self._elements.values(),
+                    _pattern=pattern
+                )
+            )
         return self._elements.values()
 
     def element(self, root=None, abspath=None, **kwargs):
