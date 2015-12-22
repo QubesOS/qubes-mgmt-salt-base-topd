@@ -205,7 +205,6 @@ class AdapterRegistry(object):
             cls._instance = object.__new__(cls, *p, **k)
         return cls._instance
 
-
     def _check(self, object, class_or_type_or_subclass):
         types = to_tuple(class_or_type_or_subclass)
         for _type in types:
@@ -237,8 +236,14 @@ class AdapterRegistry(object):
 
 
 class InterfaceClass(object):
-    def __init__(self, name, bases=(), attrs=None, __doc__=None,
-                 __module__=None):
+    def __init__(
+        self,
+        name,
+        bases=(),
+        attrs=None,
+        __doc__=None,
+        __module__=None
+    ):
 
         if attrs is None:
             attrs = {}
@@ -253,7 +258,7 @@ class InterfaceClass(object):
                     # This is how cPython figures out the module of
                     # a class, but of course it does it in C. :-/
                     __module__ = sys._getframe(1).f_globals['__name__']
-                except (AttributeError, KeyError): #pragma NO COVERAGE
+                except (AttributeError, KeyError):  #pragma NO COVERAGE
                     pass
 
         d = attrs.get('__doc__')
@@ -293,7 +298,7 @@ class InterfaceClass(object):
 
 def to_tuple(value):
     if not isinstance(value, collections.Sequence):
-        value = (value,)
+        value = (value, )
     return value
 
 
@@ -313,11 +318,15 @@ def adapter(required, provided, name=''):
     Example:
         @adapter((collections.Mapping,), IRelpath, '')
     '''
+
     def wrap(factory):
         registry.register(to_tuple(required), provided, '', factory)
+
         def wrapped_function(*args, **kwargs):
             function(*args, **kwargs)
+
         return wrapped_function
+
     return wrap
 
 
@@ -334,7 +343,6 @@ def adapt(provided, object):
 Interface = InterfaceClass('Interface', __module__='adapt')
 registry = AdapterRegistry()
 queryAdapter = registry.queryAdapter
-
 
 if __name__ == "__main__":
     import doctest
