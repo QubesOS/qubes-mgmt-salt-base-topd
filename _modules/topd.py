@@ -8,6 +8,8 @@
 :platform:      all
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import fnmatch
 import logging
@@ -23,7 +25,7 @@ from salt.exceptions import SaltRenderError
 from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
 
 # Import custom libs
-from toputils import TopUtils
+from toputils import TopUtils  # pylint: disable=E0401
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -119,8 +121,8 @@ def get_renderers(opts=None):
     # For salt versions less than 2015.8
     if version.info < (2015, 8, 0, 0):
         jinja = renderers.get('jinja', None)
-        if jinja and not jinja.func_globals.get('__grains__', None):
-            jinja.func_globals['__grains__'] = __grains__
+        if jinja and not jinja.__globals__.get('__grains__', None):
+            jinja.__globals__['__grains__'] = __grains__
 
     __context__['renderers'] = renderers
     return renderers
@@ -142,9 +144,10 @@ def get_environment(opts=None):
 def get_envs(opts=None):
     '''
     Pull the file server environments out of the master options
+    :param opts:
     '''
     opts = get_opts(opts)
-    envs = set(['base'])
+    envs = {'base'}
     if 'file_roots' in opts:
         envs.update(list(opts['file_roots']))
     return envs
@@ -170,15 +173,15 @@ def render(path, opts=None, saltenv='base', sls=''):
     return OrderedDict()
 
 
-def render_top(opts, toputils):
+def render_top(opts, toputils):  # pylint: disable=W0621
     '''
     Gather the top files
+    :param toputils:
+    :param opts:
     '''
     tops = DefaultOrderedDict(list)
     include = DefaultOrderedDict(list)
     done = DefaultOrderedDict(list)
-
-    renderers = get_renderers(opts)
     environment = get_environment(opts)
 
     # Gather initial top files
@@ -249,7 +252,7 @@ def render_top(opts, toputils):
                     else:
                         log.debug(
                             'No contents loaded for include {0} env: {1}'
-                            .format(path, saltenv)
+                            .format(sls, saltenv)
                         )
                     done[saltenv].append(sls)
         for saltenv in pops:
@@ -267,6 +270,8 @@ def merge_tops(tops):
         OrderedDict - str(target)
             list [(str state...}]
             list [(OrderedDict matches), (str state..)]
+
+    :param tops:
     '''
     top = DefaultOrderedDict(OrderedDict)
 
@@ -302,16 +307,22 @@ def merge_tops(tops):
     return top
 
 
-def get_top(path, opts=None, saltenv='base'):
+def get_top(path, opts=None, saltenv='base'):  # pylint: disable=W0613
     '''
     Returns all merged tops from path.
+
+    :param saltenv:
+    :param opts:
+    :param path:
     '''
-    #opts = dict(get_opts(opts))
     opts = get_opts(opts)
     tops = []
 
-    toputils = TopUtils(opts, pillar=is_pillar(opts))
-    enabled = toputils.enabled(saltenv=saltenv, view='raw')
+    toputils = TopUtils(opts, pillar=is_pillar(opts))  # pylint: disable=W0621
+    enabled = toputils.enabled(
+        saltenv=saltenv,
+        view='raw'
+    )  # pylint: disable=W0621
 
     try:
         for topinfo in enabled:
