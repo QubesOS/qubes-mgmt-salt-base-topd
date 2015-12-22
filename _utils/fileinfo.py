@@ -15,11 +15,7 @@ import collections
 import logging
 import os
 
-from itertools import (
-    chain,
-    compress,
-    imap,
-    )
+from itertools import (chain, compress, imap, )
 
 # Import salt libs
 import salt.ext.six as six
@@ -92,11 +88,7 @@ class FileInfo(object):
             abspath = os.path.abspath('.')
         relpath = os.path.relpath(abspath, root)
 
-        element = self.Info(
-            root=root,
-            abspath=abspath,
-            relpath=relpath
-        )
+        element = self.Info(root=root, abspath=abspath, relpath=relpath)
 
         element_hook = kwargs.get('_element_hook', None)
         if element_hook:
@@ -123,7 +115,11 @@ class FileInfo(object):
         for root, abspath in walk(roots):
             element = self.element(root, abspath, **kwargs)
 
-            if self.match_each and not all(matcher.match([element], self.pattern)):
+            if self.match_each and not all(
+                matcher.match(
+                    [element], self.pattern
+                )
+            ):
                 continue
 
             self.add_element(element, **kwargs)
@@ -171,7 +167,6 @@ def get_pattern(element, pattern=False, **patterns):
         patterns['_escape'] = None
 
     return matcher.get_pattern(element, **patterns)
-
 
 ##def fileinfo(roots, match_each=True, **patterns):
 ##    '''
@@ -243,7 +238,7 @@ def get_view(sequence, view=None, flat=None):
 
     if len(fields) in [1] and flat:
         viewinfo['mode'] = 'flat'
-    elif len(fields) in [1,2]:
+    elif len(fields) in [1, 2]:
         viewinfo['mode'] = 'reduceby'
     else:
         viewinfo['mode'] = 'raw'
@@ -260,9 +255,7 @@ def fileinfo_view(fileinfo, view=None, flat=False):
         return fileinfo
 
     # Determine type of view to return (flattened, reduceby, raw)
-    viewinfo = get_view(fileinfo,
-                        view=view,
-                        flat=flat)
+    viewinfo = get_view(fileinfo, view=view, flat=flat)
 
     # Flatten
     if 'flat' in viewinfo['mode']:
@@ -270,9 +263,9 @@ def fileinfo_view(fileinfo, view=None, flat=False):
 
     # Return dictionary using `key` as key index
     elif 'reduceby' in viewinfo['mode']:
-        fileinfo = reduceby(viewinfo['primary_key'],
-                            viewinfo['secondary_key'],
-                            fileinfo)
+        fileinfo = reduceby(
+            viewinfo['primary_key'], viewinfo['secondary_key'], fileinfo
+        )
         if flat:
             fileinfo = flatten(viewinfo['secondary_key'], fileinfo)
 
@@ -353,6 +346,7 @@ def reduceby(key, field, sequence):
 
     {'all': ['demo/demo.sls'], 'base': ['test/init.sls', 'test/test.sls']}
     '''
+
     def add_field_item(group_list, info):
         '''
         Field value to add.  Will be added to dictionary[key]
