@@ -6,52 +6,9 @@
 :maturity:      new
 :depends:       none
 :platform:      all
-
---------------------------------------------------------------------------------
-XXX: Create proper docs
---------------------------------------------------------------------------------
-
-    regex:
-        True: Patterns will be compiled using re.escape
-        False: Patterns will be compiled using fnmarch.translate (glob
-        pattern.
-
-        Note:
-            Multi-field matches require regex as the default search pattern
-            syntax.
-
-    labels:
-        Optional list of field names used to describe the object(s) to be
-        searched.  If the type of `labels` is an ordered dictionary
-        or named tuple it's key values will be used to determine the labels
-        and values to set the default patterns.
-
-    escape:
-        List of fields to escape the patterns within.  Will be escaped with
-        re.escape if regex is True, otherwise fnmatch.translate
-
-    patterns:
-        For a single field object, pass patterns='default pattern'
-        For a multi-field object search, pass either:
-
-            If `labels` defined:
-                `field_name = pattern`
-
-            If `labels` not defined:
-                `index = pattern`
-
-    Example:
-
-    Set default matcher patterns for each field to prevent needing to
-    pass on when calling match methods
-
-    >>> from collections import OrderedDict, namedtuple
-    >>> labels = ('saltenv', 'file_root', 'abspath', 'relpath', 'is_pillar')
-    >>> PathInfo = namedtuple('PathInfo', fields)
-    >>> patterns = OrderedDict.fromkeys(labels, '.*')
-    >>> patterns['relpath'] = '*[.]sls'
-    >>> matcher = Matcher(labels=field_labels, **patterns)
 '''
+
+from __future__ import absolute_import
 
 # Import python libs
 import collections
@@ -60,12 +17,12 @@ import logging
 import operator
 import re
 
-from itertools import (chain, compress, imap, )
+from itertools import (chain, compress, imap, )  # pylint: disable=E0598
 
 # Import salt libs
 import salt.ext.six as six
 
-from salt.exceptions import SaltInvocationError
+from salt.ext.six.moves import range  # pylint: disable=E0401,W0622
 from salt.utils.odict import OrderedDict
 
 # Enable logging
@@ -79,8 +36,6 @@ except NameError:
 # Define the module's virtual name
 __virtualname__ = 'matcher'
 
-#REGEX_DEFAULT_PATTERN = [r'.*']
-#GLOB_DEFAULT_PATTERN = [r'*']
 DEFAULT_PATTERN = [r'.*']
 
 
@@ -90,7 +45,6 @@ def __virtual__():
     return __virtualname__
 
 
-# XXX: Test
 class Regex(six.text_type):
     '''
     Wrapper to be able to identify regex expressions
@@ -98,26 +52,29 @@ class Regex(six.text_type):
     pass
 
 
-def getter(index, element, *ignored):
+def getter(index, element, *ignored):  # pylint: disable=W0613
     if isinstance(element, collections.Mapping):
-        getter = operator.itemgetter
+        getter_ = operator.itemgetter
     else:
-        getter = operator.attrgetter
+        getter_ = operator.attrgetter
 
     if not index:
         return lambda x: ()
     if isinstance(index, list):
-        return getter(*index)
+        return getter_(*index)
     else:
-        return getter(index)
+        return getter_(index)
 
 
-def extract_labels(element=None, *ignored):
+def extract_labels(element=None, *ignored):  # pylint: disable=W0613
     '''
     Return an element's labels.
 
-    Uses dictionary keys for a dictionary, _fileds for a namedtuple and
-    index number for list or regular tuple
+    Uses dictionary keys for a dictionary, _fields for a namedtuple and
+    index number for list or regular tuple.
+
+    Args:
+        element:
     '''
     if not element:
         return []
@@ -141,18 +98,20 @@ def generate_selectors(labels=None, *fields, **kwargs):
     a value of True in the corresponding element if in either selectors
     or kwargs, otherwise False.
 
-    Example:
+    Args:
+        labels:
 
-    >>> labels = ['one', 'two', 'three', 'four']
-    >>> fields = ['two', 'three']
-    >>> generate_selectors(labels, fields)
-    [False, True, True, False]
+    Example:
+        >>> labels = ['one', 'two', 'three', 'four']
+        >>> fields = ['two', 'three']
+        >>> generate_selectors(labels, fields)
+        [False, True, True, False]
     '''
     if not labels:
         return []
 
     enabled = True if 'all' in fields or 'all' in kwargs else False
-    selectors = [enabled for i in xrange(len(labels))]
+    selectors = [enabled for i in range(len(labels))]  # pylint: disable=W0612
 
     if enabled:
         return selectors
@@ -165,31 +124,34 @@ def generate_selectors(labels=None, *fields, **kwargs):
 
 def translate(pattern):
     '''
-    Based on fnmatch.translate
+    Translate a shell PATTERN to a regular expression. Based on
+    'fnmatch.translate'.
 
-    Translate a shell PATTERN to a regular expression.
+    Args:
+        pattern:
 
-    There is no way to quote meta-characters.
+    Note:
+        There is no way to quote meta-characters.
     '''
     i, n = 0, len(pattern)
     res = ''
     while i < n:
         c = pattern[i]
-        i = i + 1
+        i += 1
         if c == '*':
-            res = res + '.*'
+            res += '.*'
         elif c == '?':
-            res = res + '.'
+            res += '.'
         elif c == '[':
             j = i
             if j < n and pattern[j] == '!':
-                j = j + 1
+                j += 1
             if j < n and pattern[j] == ']':
-                j = j + 1
+                j += 1
             while j < n and pattern[j] != ']':
-                j = j + 1
+                j += 1
             if j >= n:
-                res = res + '\\['
+                res += '\\['
             else:
                 stuff = pattern[i:j].replace('\\', '\\\\')
                 i = j + 1
@@ -197,7 +159,7 @@ def translate(pattern):
                     stuff = '^' + stuff[1:]
                 elif stuff[0] == '^':
                     stuff = '\\' + stuff
-                res = '%s[%s]' % (res, stuff)
+                res = '{0}[{1}]'.format(res, stuff)
         else:
             res = res + re.escape(c)
     return res
@@ -205,27 +167,32 @@ def translate(pattern):
 
 def escape_text(text, regex=False):
     '''
-    Escape text for regex pattern match
+    Escape text for regex pattern match.
+
+    Args:
+        text:
+        regex:
     '''
+    # Don't escape regex strings as they are assumed to be proper syntax
     if isinstance(text, Regex):
-        # Don't escape regex strings as they are assumed to be peoper syntax
         return text
+
     elif regex:
         return re.escape(text)
+
     return translate(text)
 
 
-def get_default_pattern(regex):
-    #if regex:
-    #    return REGEX_DEFAULT_PATTERN
-    #else:
-    #    return GLOB_DEFAULT_PATTERN
+def get_default_pattern(regex):  # pylint: disable=W0613
     return DEFAULT_PATTERN
 
 
-def compile(labels, **patterns):
+def compile(labels, **patterns):  # pylint: disable=W0622
     '''
-    Compile patterns
+    Compile patterns.
+
+    Args:
+        labels:
     '''
     pattern = patterns.pop('_pattern', None)
     if pattern:
@@ -237,18 +204,9 @@ def compile(labels, **patterns):
     if not patterns or not labels:
         return None
 
-    # XXX: Think patterns should be re-created, not
-    # popped, incase those values are needed elsewhere
     for pattern in list(patterns.keys()):
         if pattern not in labels:
             patterns.pop(pattern)
-            #raise SaltInvocationError(
-            #    'Invalid pattern key: {0}'.format(pattern))
-
-            ##    # XXX: Maybe allow if new translate works
-            ##    #
-            ##    # Do not allow glob pattern matching on multi-field matches
-            ##    regex = True if len(labels) > 1 else regex
 
     default_pattern = get_default_pattern(regex)
     escape = escape if escape else []
@@ -259,7 +217,7 @@ def compile(labels, **patterns):
     for label in labels:
         if label in patterns and patterns[label]:
             field = patterns[label]
-            if isinstance(field, re._pattern_type):
+            if isinstance(field, re._pattern_type):  # pylint: disable=W0212
                 field = [field.pattern]
             if isinstance(field, six.string_types):
                 field = [field]
@@ -276,13 +234,13 @@ def compile(labels, **patterns):
     except NameError:
         raise
 
-    # Should never get here
-    raise
-
 
 def itext(element):
     '''
     Converts element to a text string suitable for regex parsing.
+
+    Args:
+        element:
     '''
     # Dictionary
     if isinstance(element, collections.Mapping):
@@ -295,10 +253,13 @@ def itext(element):
 
 def match(sequence, pattern):
     '''
-    Regex match
+    Regex match.
 
-    sequence:
-        Either a string, list of strings or list of lists / tuples
+    Args:
+        sequence:
+            Either a string, list of strings or list of lists / tuples
+
+        pattern:
     '''
     if not pattern:
         return chain(sequence)
@@ -306,16 +267,8 @@ def match(sequence, pattern):
     # Match to text string created from element
     return imap(pattern.match, imap(itext, sequence))
 
-# XXX: - Missing escaped
-#      - Have some smart way of using regex to translate...
-#      - maybe patterns can contain something, or escaped can be
-#        either a list of tuples like:
-#          escaped = {('relpath', GLOB)}
-#      - TEST by escaping everything thats not already a regex expression?
-#      - Switch to regex=False if new translate works
 
-
-def get_pattern(sequence=None, *ignored, **patterns):
+def get_pattern(sequence=None, *ignored, **patterns):  # pylint: disable=W0613
     if '_pattern' in patterns:
         return patterns['_pattern']
     labels = extract_labels(sequence)
@@ -327,5 +280,5 @@ def ifilter(sequence, **patterns):
     return compress(sequence, match(sequence, pattern))
 
 
-def filter(sequence, **patterns):
+def filter(sequence, **patterns):  # pylint: disable=W0622
     return list(ifilter(sequence, **patterns))
