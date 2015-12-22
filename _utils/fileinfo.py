@@ -10,12 +10,15 @@
 Salt fileinfo utilities for locating file paths, searching and returning
 specific file views.
 '''
+
+from __future__ import absolute_import
+
 # Import python libs
 import collections
 import logging
 import os
 
-from itertools import (chain, compress, imap, )
+from itertools import (chain, compress, imap, )  # pylint: disable=E0598
 
 # Import salt libs
 import salt.ext.six as six
@@ -59,13 +62,14 @@ class FileInfo(object):
 
     @pattern.setter
     def pattern(self, element):
-        self._pattern = get_pattern(element, **self.patterns)
-        return self._pattern
+        self._pattern = get_pattern(
+            element, **self.patterns
+        )  # pylint: disable=W0201
 
     @property
     def as_sequence(self):
         if self.pattern and not self.match_each:
-            return list(matcher.ifilter(self._elements, _pattern=pattern))
+            return list(matcher.ifilter(self._elements, _pattern=self.pattern))
         return list(self._elements)
 
     @property
@@ -78,10 +82,15 @@ class FileInfo(object):
 
     def element(self, root=None, abspath=None, **kwargs):
         '''
-        kwargs contain extra information for custom methods
-
         This method must return a valid empty object if no vars are passed
         to allow introspection to create patterns.
+
+        Parameters
+        ----------
+        root
+        abspath
+
+        kwargs contain extra information for custom methods.
         '''
         if root is None and abspath is None:
             root = os.path.abspath('.')
@@ -105,12 +114,13 @@ class FileInfo(object):
 
     def filelist(self, roots, **kwargs):
         '''
+        Parameters
+        ----------
         roots:
             file_roots, pillar_roots, cache_roots, etc to walk
 
         kwargs:
             Contains any extra variables to pass to element
-
         '''
         for root, abspath in walk(roots):
             element = self.element(root, abspath, **kwargs)
@@ -127,18 +137,29 @@ class FileInfo(object):
         return self.as_sequence
 
 
+# pylint: disable=W1401
 def find(files, **patterns):
     '''
     Search files based on one or more patterns, where patterns consist of
     the files 'index_name = pattern' such as:
+
         relpath = [r'.*\.sls']
+
+    Parameters
+    ----------
+    files
     '''
     return list(matcher.ifilter(files, **patterns))
 
 
 def walk(dirnames, followlinks=True):
     '''
-    Helper util to return a list of files in a directory
+    Helper util to return a list of files in a directory.
+
+    Parameters
+    ----------
+    dirnames
+    followlinks
     '''
     for dirname in dirnames:
         if not os.path.exists(os.path.realpath(dirname)):
@@ -146,7 +167,10 @@ def walk(dirnames, followlinks=True):
         if not os.path.isdir(dirname):
             dirname = os.path.dirname(dirname)
 
-        for root, dirs, files in os.walk(dirname, followlinks=followlinks):
+        for root, dirs, files in os.walk(
+            dirname,
+            followlinks=followlinks
+        ):  # pylint: disable=W0612
             for filename in files:
                 yield dirname, os.path.join(root, filename)
 
@@ -157,6 +181,11 @@ def get_pattern(element, pattern=False, **patterns):
 
     If a compiled pattern is not returned on the first attempt, pattern
     will return None.
+
+    Parameters
+    ----------
+    element
+    pattern
     '''
     if pattern or pattern is None:
         return pattern
@@ -168,52 +197,16 @@ def get_pattern(element, pattern=False, **patterns):
 
     return matcher.get_pattern(element, **patterns)
 
-##def fileinfo(roots, match_each=True, **patterns):
-##    '''
-##    roots:
-##        file_roots, pillar_roots, cache_roots, etc to walk
-##
-##    match_each:
-##        If True, each file path is matched which prevents uses less memory
-##        but sacrifices performance a little bit.  If False, the complete
-##        list is matched after all the file infomations has been added to
-##        fileinfo
-##
-##    patterns:
-##        Contains the patterns to match.
-##        Example:
-##            { 'saltenv': 'base', 'relpath': [r'.*\.sls'] }
-##    '''
-##    fileinfo = OrderedDict()
-##    pattern = False
-##
-##    for root, abspath in walk(roots):
-##        info = fileinfo.get(key, OrderedDict())
-##        info['root'] = root
-##        info['abspath'] = abspath
-##
-##        if pattern is False:
-##            pattern = get_pattern(info, pattern, **patterns)
-##        if pattern and match_each:
-##            match = all(matcher.match([info], pattern))
-##        else:
-##            match = True
-##
-##        if match and key not in fileinfo:
-##            fileinfo[key] = info
-##
-##    # Filter files using selected patterns
-##    if pattern is False:
-##        pattern = get_pattern(info, pattern, **patterns)
-##    if pattern and not match_each:
-##        fileinfo = list(matcher.ifilter(fileinfo, _pattern=pattern))
-##
-##    return fileinfo.values()
-
 
 def get_view(sequence, view=None, flat=None):
     '''
-    Determine type of view to return (flattened, reduceby, raw)
+    Determine type of view to return (flattened, reduceby, raw).
+
+    Parameters
+    ----------
+    sequence
+    view
+    flat
     '''
     if not sequence:
         return sequence
@@ -250,6 +243,12 @@ def fileinfo_view(fileinfo, view=None, flat=False):
     '''
     Determine and return fileinfo view which can be one of flattened,
     reduceby (dictionary) or raw (un-modified).
+
+    Parameters
+    ----------
+    fileinfo
+    view
+    flat
     '''
     if not fileinfo:
         return fileinfo
@@ -276,6 +275,8 @@ def flatten(key, sequence):
     '''
     Flattens (reduces) sequence by key. Returns a list.
 
+    Parameters
+    ----------
     key:
         sequence key of data to flatten
 
@@ -310,14 +311,18 @@ def flatten(key, sequence):
     except AttributeError:
         # Sequence
         getter = matcher.getter(key, *sequence)
-        return sorted(imap(lambda s: getter(s), sequence))
+        return sorted(
+            imap(lambda s: getter(s), sequence)
+        )  # pylint: disable=W0108
 
 
 def reduceby(key, field, sequence):
     '''
     Groups sequence by group key and reduces (only contains) values from
-    the field key. Returns a dictionary
+    the field key. Returns a dictionary.
 
+    Parameters
+    ----------
     key:
         sequence key to use to group data
 
@@ -350,7 +355,12 @@ def reduceby(key, field, sequence):
     def add_field_item(group_list, info):
         '''
         Field value to add.  Will be added to dictionary[key]
-        as its value
+        as its value.
+
+        Parameters
+        ----------
+        group_list
+        info
         '''
         field_key = matcher.getter(field, info)
         value = field_key(info)
