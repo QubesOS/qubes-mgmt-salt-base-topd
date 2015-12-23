@@ -7,9 +7,26 @@
 :depends:       none
 :platform:      all
 
-Salt file path utilities for managing top configurations
+Salt file path utilities for managing top configurations.
 
+*** WORK IN PROGRESS ***
+
+=====
+TODO:
+=====
+
+masked values (/dev/null) could fail the virtual()
+  - Not sure how to handle that; monkey patch? or add into the section
+    where the modules initially loads
+
+enabled; disabled should be same as is_enabled; IE only print status
+                  - Use reporting / status  for path details or provide
+                    options for more detail
+
+symlinks = client.symlink_list(saltenv='base',  prefix='')
+enabled = top in symlinks
 '''
+
 # Import python libs
 import copy
 import collections
@@ -98,7 +115,7 @@ class TopInfo(PathInfo):
         this regex match would not need to happen on every file; only mathced
         ones.
         '''
-        # XXX: Gid rid of needing parent
+        # TODO: Gid rid of requiring parent
         pattern = self.parent.pattern_all
         element = element._asdict()
 
@@ -234,7 +251,7 @@ class TopUtils(PathUtils):
             pass
         return super(TopUtils, self).is_relpath(path, saltenv)
 
-    # XXX Add to docs
+    # TODO: Add to docs
     def is_toppath(self, path, saltenv=None):
         '''
         toppath: 'salt'        (relpath: salt/init.top)
@@ -253,7 +270,7 @@ class TopUtils(PathUtils):
             )
         )
 
-    # XXX Add to docs
+    # TODO: Add to docs
     def toppath(self, path, saltenv=None, verify=True):
         '''
         toppath: 'salt'        (relpath: salt/init.top)
@@ -293,7 +310,6 @@ class TopUtils(PathUtils):
             return top
         return ''
 
-    # tops(self, saltenv: str|list=None, patterns: [str]=None), flat: bool=None -> [str] or {str: [str]}
     def files(
         self,
         saltenv=None,
@@ -337,9 +353,10 @@ class TopUtils(PathUtils):
 
         roots = roots or self._topinfo_roots
 
-        # XXX: Let look at ALWAYS returning 'raw'
-        #      Same for ALL methods; so remove that feature from ALL methods
-        #      and have display methods like status and report handle views
+        # TODO:
+        #   - Consider ALWAYS returning 'raw'
+        #   - Same for ALL methods; so remove that feature from ALL methods
+        #     and have display methods like status and report handle views
         view = view if view else 'raw'
         default_pattern = {'relpath': ['*.top'], }
 
@@ -416,7 +433,6 @@ class TopUtils(PathUtils):
         '''
         '''
         # Convert paths to top_paths
-        #toppaths = self.toppath(paths, saltenv)
         toppaths, unseen = self.prepare_paths(paths)
 
         enabled = self.files(
@@ -429,22 +445,6 @@ class TopUtils(PathUtils):
 
         view = view or ['saltenv', 'abspath']
         return fileinfo.fileinfo_view(enabled, view=view, flat=flat)
-
-    #
-    # TODO:
-    # =====
-    #
-    # masked values (/dev/null) could fail the virtual()
-    #   - Not sure how to handle that; monkey patch? or add into the section
-    #     where the modules initially loads
-    #
-    # enabled; disabled should be same as is_enabled; IE only print status
-    #                   - Use reporting / status  for path details or provide
-    #                     options for more detail
-    #
-    # symlinks = client.symlink_list(saltenv='base',  prefix='')
-    # enabled = top in symlinks
-    #
 
     def disabled(
         self,
@@ -486,6 +486,36 @@ class TopUtils(PathUtils):
 
     def enable(self, paths=None, saltenv='base', view=None, flat=None):
         '''
+        Enable top.
+
+        *** Work in progress ***
+
+        The following are possible top patterns that may exist within the _top
+        directory:
+
+        ========================================================================
+        Legend
+        ========================================================================
+        E: Enabled system directory
+             - Any top file in a system dir IS enabled AND deletable?
+        D: Distribution dir
+             - tops or sls files provided by formuala author
+        A: Admin dir
+             - Local administrator OVERRIDES
+        R: Removable
+        ------------------------------------------------------------------------
+        EA  /srv/salt/_tops/<saltenv>/topname.top.d/somename.conf
+        E R /srv/salt/_tops/<saltenv>/topname.top
+
+        EAR /srv/salt/_tops/<saltenv>|top_name.top.d/somename.conf
+        EAR /srv/salt/_tops/<saltenv>|top_name.top
+
+        E R /srv/salt/_tops/top_name.top.d/somename.conf
+        EAR /srv/salt/_tops/top_name.top
+
+        D  /srv/salt_or_formula/_tops/top_name.top  -- Dunno if should suppot
+        D  /srv/salt_or_formula/statedir/top_name.top
+        D  /srv/salt_or_formula/statedir/top_name.sls
         '''
         results = PrintableDict()
         toppaths, unseen = self.prepare_paths(paths)
@@ -501,33 +531,6 @@ class TopUtils(PathUtils):
             log.error(results['error'])
             return results
 
-        # ======================================================================
-        # path preference:
-        # ======================================================================
-        #
-        # System dir
-        # E: Enabled system directory
-        #      - Any top file in a system dir IS enabled AND deletable?
-        # D: Distribution dir
-        #      - tops or sls files provided by formuala author
-        # A: Admin dir
-        #      - Local administrator OVERRIDES
-        # R: Removable
-        # ======================================================================
-        #
-        # EA  /srv/salt/_tops/<saltenv>/topname.top.d/somename.conf
-        # E R /srv/salt/_tops/<saltenv>/topname.top
-        #
-        # EAR /srv/salt/_tops/<saltenv>|top_name.top.d/somename.conf
-        # EAR /srv/salt/_tops/<saltenv>|top_name.top
-        #
-        # E R /srv/salt/_tops/top_name.top.d/somename.conf
-        # EAR /srv/salt/_tops/top_name.top
-        #
-        # D  /srv/salt_or_formula/_tops/top_name.top  -- Dunno if should suppot
-        # D  /srv/salt_or_formula/statedir/top_name.top
-        # D  /srv/salt_or_formula/statedir/top_name.sls
-
         for toppath in toppaths:
             # All tops filtered by toppaths
             tops = self.files(saltenv=saltenv, view='raw', toppath=toppath)
@@ -538,7 +541,7 @@ class TopUtils(PathUtils):
             # All enabled tops
             enabled = self.enabled(files=tops, view='raw')
 
-            # XXX: This will change.
+            # XXX: This will change?
             if enabled:
                 topinfo = enabled[0]
             elif disabled:
@@ -646,46 +649,8 @@ class TopUtils(PathUtils):
             report[self.get(pathinfo, 'abspath')] = info
         return report
 
-    # XXX: need to re-add filtering back in
+    def status(self, paths=None, saltenv=None):
+        return self._status(all=tops, disabled=disabled, enabled=enabled)
+
     def report(self, paths=None, saltenv=None):
-        from timeit import default_timer as timer
-        print('Report 1: Starting timer...')
-        start = timer()
-        report1 = self._report(files=self.files(saltenv, flat=False))
-        end = timer()
-        print 'Report 1 Time: {0}'.format(end - start)
-        print
-
-        print('Report 2: Starting timer...')
-        start = timer()
-        tops = self.files(paths=paths, saltenv=saltenv, view='raw', flat=False)
-        disabled = self.disabled(
-            paths=paths,
-            saltenv=saltenv,
-            files=tops,
-            view='raw',
-            flat=False
-        )
-        enabled = self.enabled(
-            paths=paths,
-            saltenv=saltenv,
-            files=tops,
-            view='raw',
-            flat=False
-        )
-        report2 = self._status(all=tops, disabled=disabled, enabled=enabled)
-        end = timer()
-        print 'Report 2 Time: {0}'.format(end - start)
-        print
-
-        print('Report 3: Starting timer...')
-        start = timer()
-        report3 = OrderedDict()
-        report3['all'] = self._report(tops)
-        report3['disabled'] = self._report(disabled)
-        report3['enabled'] = self._report(enabled)
-        end = timer()
-        print 'Report 3 Time: {0}'.format(end - start)
-        print
-
-        return report3
+        return self._report(files=self.files(saltenv, flat=False))
