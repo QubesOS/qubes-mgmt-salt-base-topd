@@ -124,7 +124,8 @@ class PathUtils(object):
         if saltenv:
             return saltenv
 
-        files = self.find(relpath=path)
+        relpath = self.relpath(path)
+        files = self.find(relpath=relpath)
         saltenvs = list(imap(lambda s: self.get(s, 'saltenv'), files))
 
         if saltenvs:
@@ -184,8 +185,8 @@ class PathUtils(object):
 
         def to_named_tuple(element):
             return list(
-                Roots(saltenv, root)
-                for saltenv, roots_ in six.iteritems(element) for root in roots
+                Roots(saltenv, path)
+                for saltenv, paths in six.iteritems(element) for path in paths
                 if saltenv in saltenvs
             )
 
@@ -384,7 +385,6 @@ class PathUtils(object):
         :param path:
         :param saltenv:
         '''
-        saltenv = saltenv or self.saltenv(path, saltenv)
         path = self._normpath(path)
 
         if self.is_relpath(path, saltenv):
@@ -418,7 +418,6 @@ class PathUtils(object):
             return [self.path(p, saltenv) for p in path]
 
         path = self._normpath(path)
-        saltenv = saltenv or self.saltenv(path, saltenv)
         url = salt.utils.urlparse(path)
         path_type = path_type or self.path_type(path, saltenv)
 
@@ -453,7 +452,6 @@ class PathUtils(object):
         :param saltenv:
         '''
         try:
-            saltenv = saltenv or self.saltenv(path, saltenv)
             url = salt.utils.urlparse(path)
             if not salt.utils.url.validate(
                 path, [
@@ -622,18 +620,15 @@ class PathUtils(object):
             saltenv = saltenv or self.saltenv(path, saltenv)
             relpath = self.relpath(path, saltenv)
 
-            # XXX: Changed to relpath=relpath; was relpath=path
             files = self.find(relpath=relpath, saltenv=saltenv)
 
-            # XXX: Confirm the get in lambda is okay here
             abspaths = list(imap(lambda s: self.get(s, 'abspath'), files))
             for abspath in abspaths:
                 if not self.is_cache_path(abspath):
                     return abspath
             return ''
 
-    # XXX: 'saltenv' is not being used.  Should it be?
-    def is_slspath(self, path, saltenv=None):  # pylint: disable=W0613
+    def is_slspath(self, path, saltenv=None):
         '''
         slspath: 'topd'
 
@@ -645,7 +640,7 @@ class PathUtils(object):
                 ifilter(
                     lambda x: x == path, chain.from_iterable(
                         six.itervalues(
-                            self.states()
+                            self.states(saltenv)
                         )
                     )
                 )
@@ -698,12 +693,8 @@ class PathUtils(object):
         saltenv = saltenv or self.saltenv(path, saltenv)
         relpath = self.relpath(path, saltenv)
 
-        # XXX: Changed to relpath=relpath; was relpath=path
         files = self.find(relpath=relpath, saltenv=saltenv)
-
-        # XXX: Need to determine which one to return if more than one???
-        roots = set(imap(lambda s: s.root, files))
-
+        roots = set(imap(lambda s: s.file_root, files))
         return sorted(roots)
 
 

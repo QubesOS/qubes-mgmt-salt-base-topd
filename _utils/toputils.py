@@ -275,7 +275,6 @@ class TopUtils(PathUtils):
 
         return super(TopUtils, self).is_relpath(path, saltenv)
 
-    # TODO: Use 'saltenv' if provided
     def is_toppath(self, path, saltenv=None):
         '''
         toppath: 'salt'        (relpath: salt/init.top)
@@ -290,7 +289,7 @@ class TopUtils(PathUtils):
                 ifilter(
                     lambda x: x == path, chain.from_iterable(
                         six.itervalues(
-                            self.tops()
+                            self.tops(saltenv)
                         )
                     )
                 )
