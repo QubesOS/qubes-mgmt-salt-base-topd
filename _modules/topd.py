@@ -307,7 +307,7 @@ def merge_tops(tops):
     return top
 
 
-def get_top(path, opts=None, saltenv='base'):  # pylint: disable=W0613
+def get_top(path=None, opts=None, saltenv='base'):
     '''
     Returns all merged tops from path.
 
@@ -318,7 +318,12 @@ def get_top(path, opts=None, saltenv='base'):  # pylint: disable=W0613
     opts = get_opts(opts)
     tops = []
 
-    toputils = TopUtils(opts, pillar=is_pillar(opts))  # pylint: disable=W0621
+    toputils = TopUtils(
+        opts,
+        pillar=is_pillar(opts),
+        topd_dir=path,
+        saltenv=saltenv
+    )  # pylint: disable=W0621
     enabled = toputils.enabled(
         saltenv=saltenv,
         view='raw'
@@ -326,7 +331,7 @@ def get_top(path, opts=None, saltenv='base'):  # pylint: disable=W0613
 
     try:
         for topinfo in enabled:
-            opts['state_top_saltenv'] = 'base'
+            opts['state_top_saltenv'] = saltenv
             opts['state_top'] = toputils.salt_path(topinfo)
             tops.append(render_top(opts, toputils))
         tops = dict(merge_tops(tops))

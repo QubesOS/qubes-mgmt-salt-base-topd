@@ -157,7 +157,17 @@ class TopUtils(PathUtils):
     def __init__(self, opts, pillar=False, **kwargs):
         super(TopUtils, self).__init__(opts=opts, pillar=pillar, **kwargs)
 
-        self.topd_directory = self.opts.get(u'topd_dir', u'_tops')
+        topd_dir = None
+        if kwargs.get('topd_dir', None):
+            pathutils = PathUtils(opts, pillar=pillar)
+            topd_dir = pathutils.relpath(
+                kwargs['topd_dir'], kwargs.get('saltenv', 'base')
+            )
+        self.topd_directory = unicode(
+            topd_dir or self.opts.get(
+                u'topd_dir', u'_tops'
+            )
+        )
         self.verbose = kwargs.get('verbose', False)
 
         if pillar:
