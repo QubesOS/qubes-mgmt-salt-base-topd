@@ -316,6 +316,7 @@ def get_top(path=None, opts=None, saltenv='base'):
     :param path:
     '''
     opts = get_opts(opts)
+    opts['grains'] = __grains__
     tops = []
 
     toputils = TopUtils(
