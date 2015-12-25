@@ -203,9 +203,9 @@ class AdapterRegistry(object):
     ):  # pylint: disable=W0613
         cls._registry.remove((object_type, provided, factory))
 
-    def __new__(cls, *p, **k):  # pylint: disable=W0613
+    def __new__(cls, *p, **k):
         if '_instance' not in cls.__dict__:
-            cls._instance = object.__new__(cls, *p)
+            cls._instance = object.__new__(cls, *p, **k)
         return cls._instance
 
     @staticmethod
@@ -267,9 +267,10 @@ class InterfaceClass(object):
                     # This is how cPython figures out the module of
                     # a class, but of course it does it in C. :-/
                     # noinspection PyProtectedMember
+                    # pylint: disable=W0212
                     __module__ = sys._getframe(1).f_globals[
                         '__name__'
-                    ]  # pylint: disable=W0212
+                    ]
                 except (AttributeError, KeyError):  # pragma NO COVERAGE
                     pass
 
