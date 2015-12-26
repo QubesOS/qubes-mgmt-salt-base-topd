@@ -1,3 +1,37 @@
+qubes-mgmt-salt-base-topd (3.1.1-1) wheezy; urgency=medium
+
+  [ Jason Mehring ]
+  * Makefile:  Added a few formatting line feeds
+  * FORMULA: Use Makefile VARS for formula_dir, etc and re-ordered
+    fields
+  * modules: topd - Reformat
+  * modules: topd - pylint
+  * utils: adapt - Reformat
+  * utils: fileinfo - Reformat
+  * utils: matcher - Reformat
+  * utils: pathinfo - Reformat
+  * utils: pathutils - Reformat
+  * utils: toputils - Reformat
+  * debian: Fix incorect postinst filename
+  * utils: adapt - pylint
+  * utils: fileinfo - pylint
+  * utils: matcher - pylint
+  * utils: pathinfo - pylint
+  * utils: pathutils - cleanup code
+  * utils: pathutils - pylint
+  * utils: toputils - cleanup code
+  * utils: toputils - pylint
+  * utils: pathutils + toputils - return proper saltenv when calling
+    saltenv() method
+  * modules: Allow topd directory to be able to be passed to allow
+    multiple locations
+  * modules: Make sure opts contains grains when loading tops
+  * utils: adapt - Add back missing keyword arg in function signature
+    call
+  * Remove adapt module as it's not being used
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Sat, 26 Dec 2015 01:07:27 +0100
+
 qubes-mgmt-salt-base-topd (3.1.0-1) wheezy; urgency=medium
 
   [ Jason Mehring ]
