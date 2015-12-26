@@ -9,28 +9,15 @@
 
 '''
 
-# XXX: TEMP?
-#from itertools import groupby, izip
+from __future__ import absolute_import
 
 # Import python libs
-import collections
 import logging
 import os
 
-from itertools import (
-    chain,
-    ifilter,
-    imap,
-    product,
-    starmap,
-    )
-
 # Import salt libs
-import salt.fileclient
 import salt.ext.six as six
 
-from salt.utils import dictupdate
-from salt.exceptions import SaltRenderError
 from salt.utils.odict import OrderedDict
 
 # Import custom libs
@@ -45,8 +32,9 @@ try:
 except NameError:
     __context__ = {}
 
-PATHINFO_FIELDS = ('saltenv', 'file_root', 'cache_root', 'abspath', 'relpath',
-                   'is_pillar')
+PATHINFO_FIELDS = (
+    'saltenv', 'file_root', 'cache_root', 'abspath', 'relpath', 'is_pillar'
+)
 
 # Define the module's virtual name
 __virtualname__ = 'pathinfo'
@@ -64,24 +52,30 @@ class PathInfo(fileinfo.FileInfo):
         match_each:
             If True, each file path is matched which prevents uses less memory
             but sacrifices performance a little bit.  If False, the complete
-            list is matched after all the file infomations has been added to
+            list is matched after all the file information has been added to
             pathinfo
 
         patterns:
             Contains the patterns to match.
-            Example:
-                { 'saltenv': 'base', 'relpath': ['*.sls'] }
+
+        Example:
+            { 'saltenv': 'base', 'relpath': ['*.sls'] }
         '''
-        super(PathInfo, self).__init__(fields=PATHINFO_FIELDS,
-                                       match_each=match_each,
-                                       **patterns)
+        super(PathInfo, self).__init__(
+            fields=PATHINFO_FIELDS,
+            match_each=match_each,
+            **patterns
+        )
 
     def element(self, root=None, abspath=None, **kwargs):
         '''
-        kwargs contain extra information for custom methods
-
         This method must return a valid empty object if no vars are passed
         to allow introspection to create patterns.
+
+        :param root:
+        :param abspath:
+
+        kwargs contain extra information for custom methods.
         '''
         if root is None and abspath is None:
             root = os.path.abspath('.')
@@ -113,11 +107,11 @@ class PathInfo(fileinfo.FileInfo):
 
     def filelist(self, roots, **kwargs):
         '''
-        roots:
-            file_roots, pillar_roots, cache_roots, etc to walk
+        :param roots:
+            file_roots, pillar_roots, cache_roots, etc to walk.
 
         kwargs:
-            Contains any extra variables to pass to element
+            Contains any extra variables to pass to element.
 
         '''
         for env, destdirs in six.iteritems(roots):
@@ -133,32 +127,41 @@ class PathInfoDict(fileinfo.FileInfo):
         match_each:
             If True, each file path is matched which prevents uses less memory
             but sacrifices performance a little bit.  If False, the complete
-            list is matched after all the file infomations has been added to
-            pathinfo
+            list is matched after all the file information has been added to
+            pathinfo.
 
         patterns:
             Contains the patterns to match.
             Example:
                 { 'saltenv': 'base', 'relpath': ['*.sls'] }
         '''
-        super(PathInfoDict, self).__init__(fields=PATHINFO_FIELDS,
-                                           match_each=match_each,
-                                           **patterns)
+        super(PathInfoDict, self).__init__(
+            fields=PATHINFO_FIELDS,
+            match_each=match_each,
+            **patterns
+        )
         self._elements = OrderedDict()
 
     @property
     def as_sequence(self):
         if self.pattern and not self.match_each:
-            return list(matcher.ifilter(self._elements.values(),
-                                        _pattern=pattern))
+            return list(
+                matcher.ifilter(
+                    self._elements.values(),
+                    _pattern=self.pattern
+                )
+            )
         return self._elements.values()
 
     def element(self, root=None, abspath=None, **kwargs):
         '''
-        kwargs contain extra information for custom methods
+        kwargs contain extra information for custom methods.
 
         This method must return a valid empty object if no vars are passed
         to allow introspection to create patterns.
+
+        :param root:
+        :param abspath:
         '''
         if root is None and abspath is None:
             root = os.path.abspath('.')
@@ -200,15 +203,15 @@ class PathInfoDict(fileinfo.FileInfo):
 
     def filelist(self, roots, **kwargs):
         '''
-        roots:
-            file_roots, pillar_roots, cache_roots, etc to walk
+        :param roots:
+            file_roots, pillar_roots, cache_roots, etc to walk.
 
         kwargs:
-            Contains any extra variables to pass to element
+            Contains any extra variables to pass to element.
 
         '''
         for env, destdirs in six.iteritems(roots):
             kwargs['saltenv'] = env
-            super(PathInfoDicts, self).filelist(destdirs, **kwargs)
+            super(PathInfoDict, self).filelist(destdirs, **kwargs)
 
         return self.as_sequence

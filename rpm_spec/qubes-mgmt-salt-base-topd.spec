@@ -58,7 +58,6 @@ qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 /srv/salt/topd/README.rst
 
 %attr(750, root, root) %dir /srv/salt/_utils
-/srv/salt/_utils/adapt.py*
 /srv/salt/_utils/fileinfo.py*
 /srv/salt/_utils/matcher.py*
 /srv/salt/_utils/pathinfo.py*

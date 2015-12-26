@@ -8,6 +8,8 @@
 :platform:      all
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import fnmatch
 import logging
@@ -20,13 +22,10 @@ import salt.template
 import salt.version
 
 from salt.exceptions import SaltRenderError
-from salt.utils.odict import (
-    OrderedDict,
-    DefaultOrderedDict
-    )
+from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
 
 # Import custom libs
-from toputils import TopUtils
+from toputils import TopUtils  # pylint: disable=E0401
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -122,8 +121,8 @@ def get_renderers(opts=None):
     # For salt versions less than 2015.8
     if version.info < (2015, 8, 0, 0):
         jinja = renderers.get('jinja', None)
-        if jinja and not jinja.func_globals.get('__grains__', None):
-            jinja.func_globals['__grains__'] = __grains__
+        if jinja and not jinja.__globals__.get('__grains__', None):
+            jinja.__globals__['__grains__'] = __grains__
 
     __context__['renderers'] = renderers
     return renderers
@@ -145,9 +144,10 @@ def get_environment(opts=None):
 def get_envs(opts=None):
     '''
     Pull the file server environments out of the master options
+    :param opts:
     '''
     opts = get_opts(opts)
-    envs = set(['base'])
+    envs = {'base'}
     if 'file_roots' in opts:
         envs.update(list(opts['file_roots']))
     return envs
@@ -162,26 +162,26 @@ def render(path, opts=None, saltenv='base', sls=''):
         renderers = get_renderers(opts)
 
         salt_data = salt.template.compile_template(
-                template,
-                renderers,
-                opts['renderer'],
-                saltenv=saltenv,
-                sls=sls,
-                _pillar_rend=is_pillar(opts)
-            )
+            template,
+            renderers,
+            opts['renderer'],
+            saltenv=saltenv,
+            sls=sls,
+            _pillar_rend=is_pillar(opts)
+        )
         return salt_data
     return OrderedDict()
 
 
-def render_top(opts, toputils):
+def render_top(opts, toputils):  # pylint: disable=W0621
     '''
     Gather the top files
+    :param toputils:
+    :param opts:
     '''
     tops = DefaultOrderedDict(list)
     include = DefaultOrderedDict(list)
     done = DefaultOrderedDict(list)
-
-    renderers = get_renderers(opts)
     environment = get_environment(opts)
 
     # Gather initial top files
@@ -189,34 +189,41 @@ def render_top(opts, toputils):
         if not opts['default_top']:
             raise SaltRenderError(
                 'Top file merge strategy set to same, but no default_top '
-                'configuration option was set')
+                'configuration option was set'
+            )
         opts[environment] = opts['default_top']
 
     if opts.get(environment, None):
-        salt_data = render(opts['state_top'],
-                           opts=opts,
-                           saltenv=opts[environment])
+        salt_data = render(
+            opts['state_top'],
+            opts=opts,
+            saltenv=opts[environment]
+        )
         if salt_data:
             tops[opts[environment]] = salt_data
     elif opts['top_file_merging_strategy'] == 'merge':
         if opts.get('state_top_saltenv', False):
             saltenv = opts['state_top_saltenv']
-            salt_data = render(opts['state_top'],
-                               opts=opts,
-                               saltenv=saltenv)
+            salt_data = render(opts['state_top'], opts=opts, saltenv=saltenv)
             if salt_data:
                 tops[saltenv].append(salt_data)
             else:
                 log.debug('No contents loaded for env: {0}'.format(saltenv))
         else:
             for saltenv in get_envs(opts):
-                salt_data = render(opts['state_top'],
-                                   opts=opts,
-                                   saltenv=saltenv)
+                salt_data = render(
+                    opts['state_top'],
+                    opts=opts,
+                    saltenv=saltenv
+                )
                 if salt_data:
                     tops[saltenv].append(salt_data)
                 else:
-                    log.debug('No contents loaded for env: {0}'.format(saltenv))
+                    log.debug(
+                        'No contents loaded for env: {0}'.format(
+                            saltenv
+                        )
+                    )
 
     # Search initial top files for includes
     for saltenv, ctops in six.iteritems(tops):
@@ -245,7 +252,8 @@ def render_top(opts, toputils):
                     else:
                         log.debug(
                             'No contents loaded for include {0} env: {1}'
-                            .format(path, saltenv))
+                            .format(sls, saltenv)
+                        )
                     done[saltenv].append(sls)
         for saltenv in pops:
             if saltenv in include:
@@ -262,6 +270,8 @@ def merge_tops(tops):
         OrderedDict - str(target)
             list [(str state...}]
             list [(OrderedDict matches), (str state..)]
+
+    :param tops:
     '''
     top = DefaultOrderedDict(OrderedDict)
 
@@ -282,7 +292,9 @@ def merge_tops(tops):
                             matches = []
                             states = set()
                             for comp in top[saltenv][tgt] + ctop[saltenv][tgt]:
-                                if isinstance(comp, dict) and comp not in matches:
+                                if isinstance(
+                                    comp, dict
+                                ) and comp not in matches:
                                     matches.append(comp)
                                 if isinstance(comp, six.string_types):
                                     states.add(comp)
@@ -290,24 +302,37 @@ def merge_tops(tops):
                             top[saltenv][tgt].extend(list(states))
                     except TypeError:
                         raise SaltRenderError(
-                            'Unable to render top file. No targets found.')
+                            'Unable to render top file. No targets found.'
+                        )
     return top
 
 
-def get_top(path, opts=None, saltenv='base'):
+def get_top(path=None, opts=None, saltenv='base'):
     '''
     Returns all merged tops from path.
+
+    :param saltenv:
+    :param opts:
+    :param path:
     '''
-    #opts = dict(get_opts(opts))
     opts = get_opts(opts)
+    opts['grains'] = __grains__
     tops = []
 
-    toputils = TopUtils(opts, pillar=is_pillar(opts))
-    enabled = toputils.enabled(saltenv=saltenv, view='raw')
+    toputils = TopUtils(
+        opts,
+        pillar=is_pillar(opts),
+        topd_dir=path,
+        saltenv=saltenv
+    )  # pylint: disable=W0621
+    enabled = toputils.enabled(
+        saltenv=saltenv,
+        view='raw'
+    )  # pylint: disable=W0621
 
     try:
         for topinfo in enabled:
-            opts['state_top_saltenv'] = 'base'
+            opts['state_top_saltenv'] = saltenv
             opts['state_top'] = toputils.salt_path(topinfo)
             tops.append(render_top(opts, toputils))
         tops = dict(merge_tops(tops))

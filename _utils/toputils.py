@@ -7,30 +7,40 @@
 :depends:       none
 :platform:      all
 
-Salt file path utilities for managing top configurations
+Salt file path utilities for managing top configurations.
 
+*** WORK IN PROGRESS ***
+
+=====
+TODO:
+=====
+
+masked values (/dev/null) could fail the virtual()
+  - Not sure how to handle that; monkey patch? or add into the section
+    where the modules initially loads
+
+enabled; disabled should be same as is_enabled; IE only print status
+                  - Use reporting / status  for path details or provide
+                    options for more detail
+
+symlinks = client.symlink_list(saltenv='base',  prefix='')
+enabled = top in symlinks
 '''
+
+from __future__ import absolute_import
+
 # Import python libs
-import copy
 import collections
 import itertools
 import logging
 import os
 import re
 
-from itertools import (
-    chain,
-    ifilter,
-    imap,
-    product,
-    starmap,
-    )
+from itertools import (chain, ifilter, )
 
 # Import salt libs
-import salt.fileclient
 import salt.ext.six as six
 
-from salt.utils import dictupdate
 from salt.exceptions import SaltRenderError
 from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
 from salt.utils.jinja import PrintableDict
@@ -40,10 +50,7 @@ import matcher
 import fileinfo
 
 from pathutils import PathUtils
-from pathinfo import (
-    PathInfo,
-    PATHINFO_FIELDS
-    )
+from pathinfo import PathInfo
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -56,8 +63,10 @@ except NameError:
 # Define the module's virtual name
 __virtualname__ = 'toputils'
 
-TOPINFO_FIELDS = ('saltenv', 'file_root', 'cache_root', 'abspath', 'relpath',
-                  'is_pillar', 'toppath', 'realpath')
+TOPINFO_FIELDS = (
+    'saltenv', 'file_root', 'cache_root', 'abspath', 'relpath', 'is_pillar',
+    'toppath', 'realpath'
+)
 
 
 def __virtual__():
@@ -68,13 +77,18 @@ def __virtual__():
 
 def coerce_to_list(value):
     '''Converts value to a list.
+
+    :param value:
     '''
     if not value:
         value = []
+
     elif isinstance(value, six.string_types):
-        value = [value,]
+        value = [value, ]
+
     elif isinstance(value, tuple):
         value = list(value)
+
     return value
 
 
@@ -84,7 +98,7 @@ class TopInfo(PathInfo):
         match_each:
             If True, each file path is matched which prevents uses less memory
             but sacrifices performance a little bit.  If False, the complete
-            list is matched after all the file infomations has been added to
+            list is matched after all the file information has been added to
             pathinfo
 
         patterns:
@@ -92,21 +106,24 @@ class TopInfo(PathInfo):
             Example:
                 { 'saltenv': 'base', 'relpath': ['*.sls'] }
         '''
-        super(TopInfo, self).__init__(match_each=match_each,
-                                      **patterns)
+        super(TopInfo, self).__init__(match_each=match_each, **patterns)
         self.parent = parent
         self.TopInfo = collections.namedtuple('Info', TOPINFO_FIELDS)
 
-    def topinfo_element(self, element, **kwargs):
+    def topinfo_element(self, element, **kwargs):  # pylint: disable=W0613
         '''
         Check to see if element is a top file and re-create element if saltenv
         is incorrect.
 
         This is done here instead of when initially creating the element so
-        this regex match would not need to happen on every file; only mathced
+        this regex match would not need to happen on every file; only matched
         ones.
+
+        :param element:
+
+        kwargs will swallow any extra args.
         '''
-        # XXX: Gid rid of needing parent
+        # TODO: Gid rid of requiring parent
         pattern = self.parent.pattern_all
         element = element._asdict()
 
@@ -114,7 +131,6 @@ class TopInfo(PathInfo):
         match = pattern.match(relpath)
         if match:
             info = match.groupdict()
-            relpath = info['top'] + info['ext']
             if element['saltenv'] != info['saltenv']:
                 element['saltenv'] = info['saltenv']
 
@@ -137,31 +153,50 @@ class TopUtils(PathUtils):
     List status of one or all top files.  If saltenv is not provided, all
     environments will be searched
     '''
+
     def __init__(self, opts, pillar=False, **kwargs):
         super(TopUtils, self).__init__(opts=opts, pillar=pillar, **kwargs)
 
-        self.topd_directory = self.opts.get(u'topd_dir', u'_tops')
+        topd_dir = None
+        if kwargs.get('topd_dir', None):
+            pathutils = PathUtils(opts, pillar=pillar)
+            topd_dir = pathutils.relpath(
+                kwargs['topd_dir'], kwargs.get('saltenv', 'base')
+            )
+        self.topd_directory = unicode(
+            topd_dir or self.opts.get(
+                u'topd_dir', u'_tops'
+            )
+        )
         self.verbose = kwargs.get('verbose', False)
 
         if pillar:
             self.topd_base = self.opts.get(u'topd_base_pillar', u'/srv/pillar')
             include = ['pillar_roots']
+
         else:
             self.topd_base = self.opts.get(u'topd_base_state', u'/srv/salt')
             include = ['file_roots']
 
         # All enabled tops pattern
-        self.pattern_enable = re.compile(r'{0}{1}*.top'.format(
-            os.path.join(self.topd_base, self.topd_directory), os.sep))
+        self.pattern_enable = re.compile(
+            r'{0}{1}*.top'.format(
+                os.path.join(self.topd_base, self.topd_directory), os.sep
+            )
+        )
 
         # All tops pattern
-        self.pattern_all = re.compile(matcher.Regex(r'''(?ix)
+        self.pattern_all = re.compile(
+            matcher.Regex(
+                r'''(?ix)
             (?P<dir> .*? )
             (?P<saltenv> {0} )
             (?P<sep> [{1}] | [|] )
             (?P<top>.*(?=[.]top$)|.*)
             (?P<ext>[.]top|)
-            '''.format('|'.join(self.saltenvs()), os.sep)))
+            '''.format('|'.join(self.saltenvs()), os.sep)
+            )
+        )
 
         self._topinfo_roots = self.pathinfo_roots(include=include)
         self._toplist = self.files()
@@ -171,6 +206,8 @@ class TopUtils(PathUtils):
         '''
         Return a list of tops files in the specified environment or a dictionary
         of all results if saltenv is None.
+
+        :param saltenv:
         '''
         # Only return SALTENV if provided, otherwise ALL
         try:
@@ -180,20 +217,24 @@ class TopUtils(PathUtils):
         except AttributeError:
             pass
 
+        tops = DefaultOrderedDict(list)
         toplist = self.files(saltenv=saltenv)
 
-        tops = DefaultOrderedDict(list)
         for info in toplist:
             toppath = self.toppath(info, verify=False)
             tops[self.get(info, 'saltenv')].append(toppath)
 
         if saltenv:
             return {saltenv: tops[saltenv]}
+
         return tops
 
     def path_type(self, path, saltenv=None):
         '''
         Return path type.
+
+        :param path:
+        :param saltenv:
         '''
         if self.is_toppath(path, saltenv):
             return 'toppath'
@@ -204,6 +245,10 @@ class TopUtils(PathUtils):
         '''
         Relative salt path is the base path that all paths rely on.  Any
         conversions from formats that are not relative will happen here.
+
+        :param path:
+        :param saltenv:
+        :param path_type:
         '''
         if isinstance(path, list):
             return [self.path(p, saltenv) for p in path]
@@ -214,9 +259,10 @@ class TopUtils(PathUtils):
         if path_type in ['toppath']:
             tops = self.files(saltenv=saltenv, toppath=path)
             try:
-                topinfo = iter(tops).next()
+                topinfo = next(iter(tops))
                 relpath = matcher.getter('relpath', topinfo)
                 return relpath(topinfo)
+
             except StopIteration:
                 return ''
 
@@ -226,74 +272,99 @@ class TopUtils(PathUtils):
         '''
         path:      'topd/init.sls'
         relpath:   'topd/init.sls'
+
+        :param path:
+        :param saltenv:
         '''
         try:
             if path.endswith('.top'):
                 return False
+
         except AttributeError:
             pass
+
         return super(TopUtils, self).is_relpath(path, saltenv)
 
-    # XXX Add to docs
     def is_toppath(self, path, saltenv=None):
         '''
         toppath: 'salt'        (relpath: salt/init.top)
         toppath: 'salt.minion' (relpath: salt/minion.top)
         toppath: 'salt.minion' (relpath: topd/base|salt.minion)
-        '''
-        return bool(set(ifilter(
-            lambda x: x==path,
-            chain.from_iterable(six.itervalues(self.tops())))))
 
-    # XXX Add to docs
+        :param path:
+        :param saltenv:
+        '''
+        return bool(
+            set(
+                ifilter(
+                    lambda x: x == path, chain.from_iterable(
+                        six.itervalues(
+                            self.tops(saltenv)
+                        )
+                    )
+                )
+            )
+        )
+
     def toppath(self, path, saltenv=None, verify=True):
         '''
         toppath: 'salt'        (relpath: salt/init.top)
         toppath: 'salt.minion' (relpath: salt/minion.top)
         toppath: 'salt.minion' (relpath: topd/base|salt.minion)
+
+        :param path:
+        :param saltenv:
+        :param verify:
         '''
         if isinstance(path, list):
             return [self.toppath(p, saltenv) for p in path]
+
         try:
             saltenv = self.get(path, 'saltenv')
             relpath = self.get(path, 'relpath')
+
         except AttributeError:
             if not path.endswith('.top'):
-                path = path + '.top'
+                path += '.top'
+
             if self.is_toppath(path, saltenv):
                 return path
             saltenv = saltenv or self.saltenv(path, saltenv)
+
             try:
                 relpath = self.relpath(path, saltenv)
             except SaltRenderError:
                 return ''
 
-        topd_dir = self.topd_directory
-        if relpath.startswith(self.topd_directory):
-            relpath = relpath.split(self.topd_directory + os.sep)[1]
+        if relpath.startswith(self.topd_directory):  # pylint: disable=E1101
+            relpath = relpath.split(self.topd_directory + os.sep)[
+                1
+            ]  # pylint: disable=E1101
 
         match = self.pattern_all.match(relpath)
         if match:
             info = match.groupdict()
             relpath = info['top'] + info['ext']
 
-        top = relpath.lower().split('/init.top')[0]
+        top = relpath.lower().split('/init.top')[0]  # pylint: disable=E1101
         top = os.path.splitext(top)[0].replace('/', '.')
-        top = top + '.top'
+        top += '.top'
 
         if not verify or self.is_toppath(top, saltenv):
             return top
+
         return ''
 
-    # tops(self, saltenv: str|list=None, patterns: [str]=None), flat: bool=None -> [str] or {str: [str]}
-    def files(self,
-             saltenv=None,
-             roots=None,
-             files=None,
-             view=None,
-             flat=None,
-             force=False,
-             **patterns):
+    def files(
+        self,
+        saltenv=None,
+        roots=None,
+        files=None,
+        view=None,
+        flat=None,
+        force=False,
+        **patterns
+    ):
         '''
         Return a list of top files in the specified environment or a dictionary
         of all results if saltenv is None matching the given patterns.
@@ -303,13 +374,27 @@ class TopUtils(PathUtils):
         :type flat: [str]
         :rtype : [str] | {str: [str]}
 
-        :param saltenv: Can be a single saltenv such as 'base', a list of
-        saltenv's such as ['base', 'all'], or None in which case all saltenv's
-        will be set
-        :param patterns: Patterns of files to search for. Defaults to ["*"]. Example: ["*.top", "*.sls"]
-        :param flat: If True, a list of all environment values will be returned,
-        otherwise a dictionary with the passed saltenv will be returned.
-        The default for a single salt environment is to flatten
+        :param saltenv:
+            Can be a single saltenv such as 'base', a list of saltenv's such
+            as ['base', 'all'], or None in which case all saltenv's will be
+            set.
+
+        :param roots:
+        :param files:
+        :param view:
+
+        :param patterns:
+            Patterns of files to search for. Defaults to ["*"].
+
+            Example: ["*.top", "*.sls"]
+
+        :param flat:
+            If True, a list of all environment values will be returned,
+            otherwise a dictionary with the passed saltenv will be returned.
+
+            The default for a single salt environment is to flatten
+
+        :param force:
         '''
         # Reset cache
         if force:
@@ -327,22 +412,24 @@ class TopUtils(PathUtils):
 
         roots = roots or self._topinfo_roots
 
-        # XXX: Let look at ALWAYS returning 'raw'
-        #      Same for ALL methods; so remove that feature from ALL methods
-        #      and have display methods like status and report handle views
+        # TODO:
+        #   - Consider ALWAYS returning 'raw'
+        #   - Same for ALL methods; so remove that feature from ALL methods
+        #     and have display methods like status and report handle views
         view = view if view else 'raw'
-        default_pattern = {
-            'relpath': ['*.top'],
-            }
+        default_pattern = {'relpath': ['*.top'], }
 
         # Compress patterns values to make sure all patterns have values,
         # otherwise use default_pattern
-        if not list(itertools.compress(patterns.values(), patterns.values())):
+        if not list(
+            itertools.compress(
+                patterns.values(), patterns.values(
+                )
+            )
+        ):  # pylint: disable=E0598
             patterns = default_pattern
 
-        topinfo = TopInfo(parent=self,
-                          match_each=True,
-                          **patterns)
+        topinfo = TopInfo(parent=self, match_each=True, **patterns)
 
         self._toplist = super(TopUtils, self).files(
             saltenv=saltenv,
@@ -350,7 +437,8 @@ class TopUtils(PathUtils):
             view=view,
             flat=flat,
             pathinfo=topinfo,
-            **patterns)
+            **patterns
+        )
 
         return self._toplist
 
@@ -373,88 +461,140 @@ class TopUtils(PathUtils):
     def include_links(self, tops):
         includes = []
         try:
-            top = iter(tops).next()
+            top = next(iter(tops))
             saltenv = matcher.getter('saltenv', top)
             abspath = matcher.getter('abspath', top)
+
         except StopIteration:
             return includes
 
         for topinfo in tops:
             if os.path.islink(abspath(topinfo)):
                 realpath = os.path.realpath(abspath(topinfo))
-                includes.extend(self.files(saltenv=saltenv(topinfo),
-                                           abspath=realpath))
+                includes.extend(
+                    self.files(
+                        saltenv=saltenv(topinfo),
+                        abspath=realpath
+                    )
+                )
+
         return includes
 
-    def is_enabled(self, paths=None, saltenv=None, view=None, flat=None):
+    def is_enabled(self, paths=None, saltenv=None):
         '''
+        :param paths:
+        :param saltenv:
         '''
         tops = self.files(saltenv, view='raw')
         enabled = self.enabled(paths, saltenv, files=tops, view='raw')
         disabled = self.disabled(paths, saltenv, files=tops, view='raw')
         return self._status(disabled=disabled, enabled=enabled)
 
-    def enabled(self, paths=None, saltenv=None, files=None, view=None,
-                flat=False):
+    def enabled(
+        self,
+        paths=None,
+        saltenv=None,
+        files=None,
+        view=None,
+        flat=False
+    ):
         '''
+        :param paths:
+        :param saltenv:
+        :param files:
+        :param view:
+        :param flat:
         '''
         # Convert paths to top_paths
-        #toppaths = self.toppath(paths, saltenv)
-        toppaths, unseen = self.prepare_paths(paths)
+        toppaths = self.prepare_paths(paths)[0]
 
-        enabled = self.files(saltenv=saltenv,
-                             files=files,
-                             view='raw',
-                             toppath=toppaths,
-                             abspath=self.pattern_enable)
+        enabled = self.files(
+            saltenv=saltenv,
+            files=files,
+            view='raw',
+            toppath=toppaths,
+            abspath=self.pattern_enable
+        )
 
         view = view or ['saltenv', 'abspath']
         return fileinfo.fileinfo_view(enabled, view=view, flat=flat)
 
-    #
-    # TODO:
-    # =====
-    #
-    # masked values (/dev/null) could fail the virtual()
-    #   - Not sure how to handle that; monkey patch? or add into the section
-    #     where the modules initially loads
-    #
-    # enabled; disabled should be same as is_enabled; IE only print status
-    #                   - Use reporting / status  for path details or provide
-    #                     options for more detail
-    #
-    # symlinks = client.symlink_list(saltenv='base',  prefix='')
-    # enabled = top in symlinks
-    #
-
-    def disabled(self, paths=None, saltenv=None, files=None, view=None,
-                 flat=False):
+    def disabled(
+        self,
+        paths=None,
+        saltenv=None,
+        files=None,
+        view=None,
+        flat=False
+    ):
         '''
+        :param paths:
+        :param saltenv:
+        :param files:
+        :param view:
+        :param flat:
         '''
         # Convert paths to top_paths
-        toppaths, unseen = self.prepare_paths(paths)
+        toppaths = self.prepare_paths(paths)[0]
 
-        all_tops = self.files(saltenv=saltenv,
-                              files=files,
-                              view='raw',
-                              toppath=toppaths)
+        all_tops = self.files(
+            saltenv=saltenv,
+            files=files,
+            view='raw',
+            toppath=toppaths
+        )
 
         # Don't include enabled tops
-        enabled = set(self.enabled(paths=paths,
-                                   saltenv=saltenv,
-                                   files=files,
-                                   view='raw'))
+        enabled = set(
+            self.enabled(
+                paths=paths,
+                saltenv=saltenv,
+                files=files,
+                view='raw'
+            )
+        )
 
         # Don't include tops link target
         enabled.update(set(self.include_links(enabled)))
 
         disabled = set(all_tops).difference(enabled)
-
         view = view or ['saltenv', 'abspath']
         return fileinfo.fileinfo_view(list(disabled), view=view, flat=flat)
 
-    def enable(self, paths=None, saltenv='base', view=None, flat=None):
+    def enable(self, paths=None, saltenv='base'):
         '''
+        Enable top.
+
+        *** Work in progress ***
+
+        The following are possible top patterns that may exist within the _top
+        directory:
+
+        ========================================================================
+        Legend
+        ========================================================================
+        E: Enabled system directory
+             - Any top file in a system dir IS enabled AND deletable?
+        D: Distribution dir
+             - tops or sls files provided by formula author
+        A: Admin dir
+             - Local administrator OVERRIDES
+        R: Removable
+        ------------------------------------------------------------------------
+        EA  /srv/salt/_tops/<saltenv>/top_name.top.d/filename.conf
+        E R /srv/salt/_tops/<saltenv>/top_name.top
+
+        EAR /srv/salt/_tops/<saltenv>|top_name.top.d/filename.conf
+        EAR /srv/salt/_tops/<saltenv>|top_name.top
+
+        E R /srv/salt/_tops/top_name.top.d/filename.conf
+        EAR /srv/salt/_tops/top_name.top
+
+        D  /srv/salt_or_formula/_tops/top_name.top  -- Dunno if should support
+        D  /srv/salt_or_formula/state_dir/top_name.top
+        D  /srv/salt_or_formula/state_dir/top_name.sls
+        :param paths:
+        :param saltenv:
         '''
         results = PrintableDict()
         toppaths, unseen = self.prepare_paths(paths)
@@ -470,38 +610,9 @@ class TopUtils(PathUtils):
             log.error(results['error'])
             return results
 
-        # ======================================================================
-        # path preference:
-        # ======================================================================
-        #
-        # System dir
-        # E: Enabled system directory
-        #      - Any top file in a system dir IS enabled AND deletable?
-        # D: Distribution dir
-        #      - tops or sls files provided by formuala author
-        # A: Admin dir
-        #      - Local administrator OVERRIDES
-        # R: Removable
-        # ======================================================================
-        #
-        # EA  /srv/salt/_tops/<saltenv>/topname.top.d/somename.conf
-        # E R /srv/salt/_tops/<saltenv>/topname.top
-        #
-        # EAR /srv/salt/_tops/<saltenv>|top_name.top.d/somename.conf
-        # EAR /srv/salt/_tops/<saltenv>|top_name.top
-        #
-        # E R /srv/salt/_tops/top_name.top.d/somename.conf
-        # EAR /srv/salt/_tops/top_name.top
-        #
-        # D  /srv/salt_or_formula/_tops/top_name.top  -- Dunno if should suppot
-        # D  /srv/salt_or_formula/statedir/top_name.top
-        # D  /srv/salt_or_formula/statedir/top_name.sls
-
         for toppath in toppaths:
             # All tops filtered by toppaths
-            tops = self.files(saltenv=saltenv,
-                              view='raw',
-                              toppath=toppath)
+            tops = self.files(saltenv=saltenv, view='raw', toppath=toppath)
 
             # All disabled tops
             disabled = self.disabled(files=tops, view='raw')
@@ -509,20 +620,22 @@ class TopUtils(PathUtils):
             # All enabled tops
             enabled = self.enabled(files=tops, view='raw')
 
-            # XXX: This will change.
+            # XXX: This will change?
             if enabled:
                 topinfo = enabled[0]
+
             elif disabled:
                 topinfo = disabled[0]
+
             else:
                 message = 'No valid top names found: {0}'.format(toppath)
                 results[toppath] = message
                 log.error(results[toppath])
                 continue
 
-            topdir = os.path.join(self.topd_base,
-                                  self.topd_directory,
-                                  topinfo.saltenv)
+            topdir = os.path.join(
+                self.topd_base, self.topd_directory, topinfo.saltenv
+            )
 
             if not os.path.exists(topdir):
                 os.makedirs(topdir)
@@ -544,39 +657,40 @@ class TopUtils(PathUtils):
                 message['status'] = 'enabled'
 
             else:
-                message['error'] =  'Unknown error'
+                message['error'] = 'Unknown error'
 
             if self.verbose or 'error' in message:
-                message['topdir']   = topdir
-                message['toppath']  = toppath
-                message['path']     = path
-                message['topinfo']  = topinfo
-                message['paths']    = paths
-                message['saltenv']  = saltenv
+                message['topdir'] = topdir
+                message['toppath'] = toppath
+                message['path'] = path
+                message['topinfo'] = topinfo
+                message['paths'] = paths
+                message['saltenv'] = saltenv
                 message['toppaths'] = toppaths
-                message['unseen']   = unseen
-                message['pillar']   = self.pillar
-                message['roots']    = self._topinfo_roots
+                message['unseen'] = unseen
+                message['pillar'] = self.pillar
+                message['roots'] = self._topinfo_roots
 
             results[toppath] = message
 
             if 'error' in message:
                 log.error('{0}: {1}'.format(toppath, results[toppath]))
+
             else:
                 log.info('{0}: {1}'.format(toppath, results[toppath]))
 
         return results
 
-    def disable(self, paths=None, saltenv='base', view=None, flat=None):
+    def disable(self, paths=None, saltenv='base'):
         '''
+        :param paths:
+        :param saltenv:
         '''
         results = DefaultOrderedDict(list)
         toppaths, unseen = self.prepare_paths(paths)
 
         if toppaths:
-            tops = self.enabled(paths=paths,
-                                saltenv=saltenv,
-                                view='raw')
+            tops = self.enabled(paths=paths, saltenv=saltenv, view='raw')
 
             for topinfo in tops:
                 if os.path.exists(topinfo.abspath):
@@ -584,9 +698,7 @@ class TopUtils(PathUtils):
                     results['disabled'].append(topinfo.toppath)
 
         if toppaths:
-            tops = self.disabled(paths=toppaths,
-                                 saltenv=saltenv,
-                                 view='raw')
+            tops = self.disabled(paths=toppaths, saltenv=saltenv, view='raw')
             for topinfo in tops:
                 results['unchanged'].append(topinfo.toppath)
                 toppaths.remove(topinfo.toppath)
@@ -594,22 +706,29 @@ class TopUtils(PathUtils):
         if unseen:
             for path in unseen:
                 results['error'].append(path)
+
         return results
 
-    def _status(self, view=None, flat=None, **kwargs):
+    @staticmethod
+    def _status(view=None, flat=None, **kwargs):
         view = view or ['saltenv', 'abspath']
         status = {}
+
         for key, topinfo in six.iteritems(kwargs):
             if topinfo:
-                status[key] = fileinfo.fileinfo_view(topinfo,
-                                                     view=view,
-                                                     flat=flat)
+                status[key] = fileinfo.fileinfo_view(
+                    topinfo,
+                    view=view,
+                    flat=flat
+                )
+
         return status
 
     def _report(self, files=None, saltenv=None, patterns=None):
         if not files:
             saltenvs = self.saltenvs(saltenv)
             files = self.files(saltenvs, view='raw', **patterns)
+
         report = OrderedDict()
 
         for pathinfo in files:
@@ -617,50 +736,10 @@ class TopUtils(PathUtils):
             info['is_toppath'] = self.is_toppath(pathinfo)
             info['toppath'] = self.toppath(pathinfo)
             report[self.get(pathinfo, 'abspath')] = info
+
         return report
 
-    # XXX: need to re-add filtering back in
+    # XXX: Signature of method 'TopUtils.report()' does not match signature of
+    #      base method in class 'PathUtils'
     def report(self, paths=None, saltenv=None):
-        from timeit import default_timer as timer
-        print('Report 1: Starting timer...')
-        start = timer()
-        report1 = self._report(files=self.files(saltenv, flat=False))
-        end = timer()
-        print 'Report 1 Time: {0}'.format(end - start)
-        print
-
-        print('Report 2: Starting timer...')
-        start = timer()
-        tops = self.files(paths=paths,
-                          saltenv=saltenv,
-                          view='raw',
-                          flat=False)
-        disabled = self.disabled(paths=paths,
-                                 saltenv=saltenv,
-                                 files=tops,
-                                 view='raw',
-                                 flat=False)
-        enabled = self.enabled(paths=paths,
-                               saltenv=saltenv,
-                               files=tops,
-                               view='raw',
-                               flat=False)
-        report2 = self._status(all=tops,
-                               disabled=disabled,
-                               enabled=enabled)
-        end = timer()
-        print 'Report 2 Time: {0}'.format(end - start)
-        print
-
-        print('Report 3: Starting timer...')
-        start = timer()
-        report3 = OrderedDict()
-        report3['all'] = self._report(tops)
-        report3['disabled'] = self._report(disabled)
-        report3['enabled'] = self._report(enabled)
-        end = timer()
-        print 'Report 3 Time: {0}'.format(end - start)
-        print
-
-        return report3
-
+        return self._report(files=self.files(saltenv, flat=False))
