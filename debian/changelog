@@ -1,3 +1,9 @@
+qubes-mgmt-salt-base-topd (3.2.0-1) wheezy; urgency=medium
+
+  * Load topd module only in dom0
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Wed, 18 May 2016 02:53:21 +0200
+
 qubes-mgmt-salt-base-topd (3.1.1-1) wheezy; urgency=medium
 
   [ Jason Mehring ]

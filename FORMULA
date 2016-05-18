@@ -2,7 +2,7 @@
 
 package-name:       qubes-mgmt-salt-base-topd
 saltenv:            base
-version:            3.1.1
+version:            3.2.0
 release:            1
 name:               topd-formula
 top_level_dir:      topd
