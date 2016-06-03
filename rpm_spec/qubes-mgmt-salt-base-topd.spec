@@ -35,8 +35,8 @@ make install DESTDIR=%{buildroot} LIBDIR=%{_libdir} BINDIR=%{_bindir} SBINDIR=%{
 
 %post
 # Update Salt Configuration
-qubesctl saltutil.clear_cache -l quiet --out quiet > /dev/null || true
-qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
+salt-call --local saltutil.clear_cache -l quiet --out quiet > /dev/null || true
+salt-call --local saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 
 # Enable States
 /usr/bin/salt-call --local top.enable topd saltenv=base -l quiet --out quiet > /dev/null || true
