@@ -337,6 +337,6 @@ def get_top(path=None, opts=None, saltenv='base'):
             tops.append(render_top(opts, toputils))
         tops = dict(merge_tops(tops))
     except SaltRenderError:
-        tops = {}
+        raise
 
     return tops
