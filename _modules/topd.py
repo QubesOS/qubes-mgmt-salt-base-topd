@@ -165,6 +165,8 @@ def render(path, opts=None, saltenv='base', sls=''):
             template,
             renderers,
             opts['renderer'],
+            blacklist=None,
+            whitelist=None,
             saltenv=saltenv,
             sls=sls,
             _pillar_rend=is_pillar(opts)
