@@ -62,6 +62,7 @@ import salt.ext.six as six
 
 from salt.exceptions import SaltRenderError
 from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
+from salt.utils.url import urlparse
 
 # Import custom libs
 import matcher
@@ -370,7 +371,7 @@ class PathUtils(object):
 
     @staticmethod
     def _normpath(path):
-        if not salt.utils.urlparse(path).scheme:
+        if not urlparse(path).scheme:
             return os.path.normpath(path)
         return path
 
@@ -418,7 +419,7 @@ class PathUtils(object):
             return [self.path(p, saltenv) for p in path]
 
         path = self._normpath(path)
-        url = salt.utils.urlparse(path)
+        url = urlparse(path)
         path_type = path_type or self.path_type(path, saltenv)
 
         if path_type in ['relpath']:
@@ -452,7 +453,7 @@ class PathUtils(object):
         :param saltenv:
         '''
         try:
-            url = salt.utils.urlparse(path)
+            url = urlparse(path)
             if not salt.utils.url.validate(
                 path, [
                     ''
@@ -541,7 +542,7 @@ class PathUtils(object):
 
         except AttributeError:
             if salt.utils.url.validate(path, ['', 'file']):
-                url = salt.utils.urlparse(path)
+                url = urlparse(path)
                 return os.path.commonprefix(
                     [url.path, self.opts['cachedir']]
                 ) == self.opts['cachedir']
@@ -592,7 +593,7 @@ class PathUtils(object):
             pass
 
         if salt.utils.url.validate(path, ['', 'file']):
-            url = salt.utils.urlparse(path)
+            url = urlparse(path)
             return not self.is_cache_path(path) and os.path.isabs(url.path)
 
         return False
