@@ -1,3 +1,18 @@
+qubes-mgmt-salt-base-topd (4.0.1-1) unstable; urgency=medium
+
+  [ Marek Marczykowski-Górecki ]
+  * travis: switch to r4.0
+
+  [ Frédéric Pierret ]
+  * Create .spec.in and Source0
+  * spec.in: add changelog placeholder
+
+  [ Frédéric Pierret (fepitre) ]
+  * urlparse: update use of urlparse from upstream
+  * Use overrides only with salt version older than 2018.3
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Fri, 08 Mar 2019 13:25:45 +0100
+
 qubes-mgmt-salt-base-topd (4.0.0-1) unstable; urgency=medium
 
   * travis: drop debootstrap workaround
