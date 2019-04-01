@@ -106,17 +106,12 @@ def get_opts(opts=None):
     return opts
 
 
-def is_pillar(opts=None):
-    opts = get_opts(opts)
-    return True if opts['file_roots'] is opts['pillar_roots'] else False
-
-
-def get_renderers(opts=None):
+def get_renderers(opts=None, pillar=False):
     if 'renderers' in __context__:
         return __context__['renderers']
 
     opts = get_opts(opts)
-    renderers = salt.loader.render(opts, salt.loader.minion_mods(opts))
+    renderers = salt.loader.render(opts, salt.loader.minion_mods(opts), pillar)
 
     # For salt versions less than 2015.8
     if version.info < (2015, 8, 0, 0):
@@ -128,14 +123,13 @@ def get_renderers(opts=None):
     return renderers
 
 
-def get_fileclient(opts=None):
+def get_fileclient(opts=None, pillar=False):
     opts = get_opts(opts)
-    return salt.fileclient.get_file_client(opts, is_pillar(opts))
+    return salt.fileclient.get_file_client(opts, pillar)
 
 
-def get_environment(opts=None):
-    opts = get_opts(opts)
-    if is_pillar(opts):
+def get_environment(pillar):
+    if pillar:
         return 'pillarenv'
     else:
         return 'environment'
@@ -153,13 +147,13 @@ def get_envs(opts=None):
     return envs
 
 
-def render(path, opts=None, saltenv='base', sls=''):
+def render(path, opts=None, saltenv='base', sls='', pillar=False):
     opts = get_opts(opts)
-    client = get_fileclient(opts)
+    client = get_fileclient(opts, pillar=pillar)
     template = client.cache_file(path, saltenv)
 
     if template:
-        renderers = get_renderers(opts)
+        renderers = get_renderers(opts, pillar)
 
         salt_data = salt.template.compile_template(
             template,
@@ -169,13 +163,13 @@ def render(path, opts=None, saltenv='base', sls=''):
             whitelist=None,
             saltenv=saltenv,
             sls=sls,
-            _pillar_rend=is_pillar(opts)
+            _pillar_rend=pillar
         )
         return salt_data
     return OrderedDict()
 
 
-def render_top(opts, toputils):  # pylint: disable=W0621
+def render_top(opts, toputils, pillar=False):  # pylint: disable=W0621
     '''
     Gather the top files
     :param toputils:
@@ -184,7 +178,7 @@ def render_top(opts, toputils):  # pylint: disable=W0621
     tops = DefaultOrderedDict(list)
     include = DefaultOrderedDict(list)
     done = DefaultOrderedDict(list)
-    environment = get_environment(opts)
+    environment = get_environment(pillar=pillar)
 
     # Gather initial top files
     if opts['top_file_merging_strategy'] == 'same' and not opts[environment]:
@@ -199,14 +193,15 @@ def render_top(opts, toputils):  # pylint: disable=W0621
         salt_data = render(
             opts['state_top'],
             opts=opts,
-            saltenv=opts[environment]
+            saltenv=opts[environment],
+            pillar=pillar
         )
         if salt_data:
             tops[opts[environment]] = salt_data
     elif opts['top_file_merging_strategy'] == 'merge':
         if opts.get('state_top_saltenv', False):
             saltenv = opts['state_top_saltenv']
-            salt_data = render(opts['state_top'], opts=opts, saltenv=saltenv)
+            salt_data = render(opts['state_top'], opts=opts, saltenv=saltenv, pillar=pillar)
             if salt_data:
                 tops[saltenv].append(salt_data)
             else:
@@ -216,7 +211,8 @@ def render_top(opts, toputils):  # pylint: disable=W0621
                 salt_data = render(
                     opts['state_top'],
                     opts=opts,
-                    saltenv=saltenv
+                    saltenv=saltenv,
+                    pillar=pillar
                 )
                 if salt_data:
                     tops[saltenv].append(salt_data)
@@ -248,7 +244,7 @@ def render_top(opts, toputils):  # pylint: disable=W0621
                 for sls in fnmatch.filter(states[saltenv], sls_match):
                     if sls in done[saltenv]:
                         continue
-                    salt_data = render(sls, opts=opts, saltenv=saltenv)
+                    salt_data = render(sls, opts=opts, saltenv=saltenv, pillar=pillar)
                     if salt_data:
                         tops[saltenv].append(salt_data)
                     else:
@@ -309,7 +305,7 @@ def merge_tops(tops):
     return top
 
 
-def get_top(path=None, opts=None, saltenv='base'):
+def get_top(path=None, opts=None, saltenv='base', pillar=False):
     '''
     Returns all merged tops from path.
 
@@ -323,7 +319,7 @@ def get_top(path=None, opts=None, saltenv='base'):
 
     toputils = TopUtils(
         opts,
-        pillar=is_pillar(opts),
+        pillar=pillar,
         topd_dir=path,
         saltenv=saltenv
     )  # pylint: disable=W0621
@@ -336,7 +332,7 @@ def get_top(path=None, opts=None, saltenv='base'):
         for topinfo in enabled:
             opts['state_top_saltenv'] = saltenv
             opts['state_top'] = toputils.salt_path(topinfo)
-            tops.append(render_top(opts, toputils))
+            tops.append(render_top(opts, toputils, pillar=pillar))
         tops = dict(merge_tops(tops))
     except SaltRenderError:
         raise
