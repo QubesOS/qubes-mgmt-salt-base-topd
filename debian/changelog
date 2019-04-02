@@ -1,3 +1,9 @@
+qubes-mgmt-salt-base-topd (4.1.0-1) unstable; urgency=medium
+
+  * Add explicit pillar= argument to get_top()
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Tue, 02 Apr 2019 02:49:15 +0200
+
 qubes-mgmt-salt-base-topd (4.0.1-1) unstable; urgency=medium
 
   [ Marek Marczykowski-Górecki ]
