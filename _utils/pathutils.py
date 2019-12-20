@@ -54,7 +54,7 @@ import copy
 import logging
 import os
 
-from itertools import (chain, ifilter, imap, product, starmap, )
+from itertools import (chain, product, starmap, )
 
 # Import salt libs
 import salt.fileclient
@@ -127,7 +127,7 @@ class PathUtils(object):
 
         relpath = self.relpath(path)
         files = self.find(relpath=relpath)
-        saltenvs = list(imap(lambda s: self.get(s, 'saltenv'), files))
+        saltenvs = list(map(lambda s: self.get(s, 'saltenv'), files))
 
         if saltenvs:
             return saltenvs[0]
@@ -623,7 +623,7 @@ class PathUtils(object):
 
             files = self.find(relpath=relpath, saltenv=saltenv)
 
-            abspaths = list(imap(lambda s: self.get(s, 'abspath'), files))
+            abspaths = list(map(lambda s: self.get(s, 'abspath'), files))
             for abspath in abspaths:
                 if not self.is_cache_path(abspath):
                     return abspath
@@ -638,7 +638,7 @@ class PathUtils(object):
         '''
         return bool(
             set(
-                ifilter(
+                filter(
                     lambda x: x == path, chain.from_iterable(
                         six.itervalues(
                             self.states(saltenv)
@@ -695,7 +695,7 @@ class PathUtils(object):
         relpath = self.relpath(path, saltenv)
 
         files = self.find(relpath=relpath, saltenv=saltenv)
-        roots = set(imap(lambda s: s.file_root, files))
+        roots = set(map(lambda s: s.file_root, files))
         return sorted(roots)
 
 

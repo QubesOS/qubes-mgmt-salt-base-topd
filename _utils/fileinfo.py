@@ -18,7 +18,7 @@ import collections
 import logging
 import os
 
-from itertools import (chain, compress, imap, )  # pylint: disable=E0598
+from itertools import (chain, compress, )  # pylint: disable=E0598
 
 # Import salt libs
 import salt.ext.six as six
@@ -312,7 +312,7 @@ def flatten(key, sequence):
         # Sequence
         getter = matcher.getter(key, *sequence)
         return sorted(
-            imap(lambda s: getter(s), sequence)
+            map(lambda s: getter(s), sequence)
         )  # pylint: disable=W0108
 
 

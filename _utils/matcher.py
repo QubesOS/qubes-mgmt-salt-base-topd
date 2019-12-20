@@ -17,7 +17,7 @@ import logging
 import operator
 import re
 
-from itertools import (chain, compress, imap, )  # pylint: disable=E0598
+from itertools import (chain, compress, )  # pylint: disable=E0598
 
 # Import salt libs
 import salt.ext.six as six
@@ -217,7 +217,7 @@ def compile(labels, **patterns):  # pylint: disable=W0622
     for label in labels:
         if label in patterns and patterns[label]:
             field = patterns[label]
-            if isinstance(field, re._pattern_type):  # pylint: disable=W0212
+            if isinstance(field, re.Pattern):  # pylint: disable=W0212
                 field = [field.pattern]
             if isinstance(field, six.string_types):
                 field = [field]
@@ -244,11 +244,11 @@ def itext(element):
     '''
     # Dictionary
     if isinstance(element, collections.Mapping):
-        return '\n'.join(imap(six.text_type, six.itervalues(element)))
+        return '\n'.join(map(six.text_type, six.itervalues(element)))
 
     # Tuple / list
     else:
-        return '\n'.join(imap(six.text_type, element))
+        return '\n'.join(map(six.text_type, element))
 
 
 def match(sequence, pattern):
@@ -265,7 +265,7 @@ def match(sequence, pattern):
         return chain(sequence)
 
     # Match to text string created from element
-    return imap(pattern.match, imap(itext, sequence))
+    return map(pattern.match, map(itext, sequence))
 
 
 def get_pattern(sequence=None, *ignored, **patterns):  # pylint: disable=W0613

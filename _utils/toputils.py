@@ -36,7 +36,7 @@ import logging
 import os
 import re
 
-from itertools import (chain, ifilter, )
+from itertools import (chain, )
 
 # Import salt libs
 import salt.ext.six as six
@@ -163,7 +163,7 @@ class TopUtils(PathUtils):
             topd_dir = pathutils.relpath(
                 kwargs['topd_dir'], kwargs.get('saltenv', 'base')
             )
-        self.topd_directory = unicode(
+        self.topd_directory = str(
             topd_dir or self.opts.get(
                 u'topd_dir', u'_tops'
             )
@@ -296,7 +296,7 @@ class TopUtils(PathUtils):
         '''
         return bool(
             set(
-                ifilter(
+                filter(
                     lambda x: x == path, chain.from_iterable(
                         six.itervalues(
                             self.tops(saltenv)
