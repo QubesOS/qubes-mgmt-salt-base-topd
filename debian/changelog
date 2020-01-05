@@ -1,3 +1,13 @@
+qubes-mgmt-salt-base-topd (4.1.1-1) unstable; urgency=medium
+
+  [ Frédéric Pierret (fepitre) ]
+  * travis: switch to bionic
+
+  [ Marek Marczykowski-Górecki ]
+  * Make it compatible with Python3
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Mon, 06 Jan 2020 00:36:20 +0100
+
 qubes-mgmt-salt-base-topd (4.1.0-1) unstable; urgency=medium
 
   * Add explicit pillar= argument to get_top()
