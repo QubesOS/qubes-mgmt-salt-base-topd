@@ -8,6 +8,7 @@ URL:	   http://www.qubes-os.org/
 
 Group:     System administration tools
 BuildArch: noarch
+BuildRequires: make
 Requires:  salt
 Requires:  salt-minion
 Requires:  qubes-mgmt-salt-config >= 4.1.0
@@ -16,7 +17,6 @@ Requires:  qubes-mgmt-salt-base-overrides
 Requires:  qubes-mgmt-salt-base-overrides-libs
 %endif
 Requires(post): /usr/bin/salt-call
-
 
 Source0: %{name}-%{version}.tar.gz
 
