@@ -1,0 +1,11 @@
+host:
+  rpm:
+    build:
+      - rpm_spec/qubes-mgmt-salt-base-topd.spec
+vm:
+  rpm:
+    build:
+      - rpm_spec/qubes-mgmt-salt-base-topd.spec
+  deb:
+    build:
+      - debian
