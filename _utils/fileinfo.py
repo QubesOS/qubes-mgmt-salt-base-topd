@@ -21,8 +21,6 @@ import os
 from itertools import (chain, compress, )  # pylint: disable=E0598
 
 # Import salt libs
-import salt.ext.six as six
-
 from salt.utils.odict import OrderedDict
 
 # Import custom libs
@@ -212,7 +210,7 @@ def get_view(sequence, view=None, flat=None):
         return sequence
 
     view = view if view else []
-    if isinstance(view, six.string_types):
+    if isinstance(view, str):
         view = [view]
 
     labels = matcher.extract_labels(*sequence)

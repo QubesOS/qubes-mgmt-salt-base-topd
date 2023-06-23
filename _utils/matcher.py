@@ -20,9 +20,6 @@ import re
 from itertools import (chain, compress, )  # pylint: disable=E0598
 
 # Import salt libs
-import salt.ext.six as six
-
-from salt.ext.six.moves import range  # pylint: disable=E0401,W0622
 from salt.utils.odict import OrderedDict
 
 # Enable logging
@@ -45,7 +42,7 @@ def __virtual__():
     return __virtualname__
 
 
-class Regex(six.text_type):
+class Regex(str):
     '''
     Wrapper to be able to identify regex expressions
     '''
@@ -219,7 +216,7 @@ def compile(labels, **patterns):  # pylint: disable=W0622
             field = patterns[label]
             if isinstance(field, re.Pattern):  # pylint: disable=W0212
                 field = [field.pattern]
-            if isinstance(field, six.string_types):
+            if isinstance(field, str):
                 field = [field]
             if label in escape or not regex:
                 field = [_escape_text(text) for text in field]
@@ -229,7 +226,7 @@ def compile(labels, **patterns):  # pylint: disable=W0622
 
     try:
         return re.compile(
-            r'\n'.join(six.itervalues(pattern)), re.MULTILINE | re.DOTALL
+            r'\n'.join(pattern.values()), re.MULTILINE | re.DOTALL
         )
     except NameError:
         raise
@@ -244,11 +241,11 @@ def itext(element):
     '''
     # Dictionary
     if isinstance(element, collections.abc.Mapping):
-        return '\n'.join(map(six.text_type, six.itervalues(element)))
+        return '\n'.join(map(str, element.values()))
 
     # Tuple / list
     else:
-        return '\n'.join(map(six.text_type, element))
+        return '\n'.join(map(str, element))
 
 
 def match(sequence, pattern):

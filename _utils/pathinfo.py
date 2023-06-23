@@ -16,8 +16,6 @@ import logging
 import os
 
 # Import salt libs
-import salt.ext.six as six
-
 from salt.utils.odict import OrderedDict
 
 # Import custom libs
@@ -114,7 +112,7 @@ class PathInfo(fileinfo.FileInfo):
             Contains any extra variables to pass to element.
 
         '''
-        for env, destdirs in six.iteritems(roots):
+        for env, destdirs in roots.items():
             kwargs['saltenv'] = env
             super(PathInfo, self).filelist(destdirs, **kwargs)
 
@@ -210,7 +208,7 @@ class PathInfoDict(fileinfo.FileInfo):
             Contains any extra variables to pass to element.
 
         '''
-        for env, destdirs in six.iteritems(roots):
+        for env, destdirs in roots.items():
             kwargs['saltenv'] = env
             super(PathInfoDict, self).filelist(destdirs, **kwargs)
 

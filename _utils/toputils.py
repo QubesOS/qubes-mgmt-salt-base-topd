@@ -39,8 +39,6 @@ import re
 from itertools import (chain, )
 
 # Import salt libs
-import salt.ext.six as six
-
 from salt.exceptions import SaltRenderError
 from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
 from salt.utils.jinja import PrintableDict
@@ -83,7 +81,7 @@ def coerce_to_list(value):
     if not value:
         value = []
 
-    elif isinstance(value, six.string_types):
+    elif isinstance(value, str):
         value = [value, ]
 
     elif isinstance(value, tuple):
@@ -298,9 +296,7 @@ class TopUtils(PathUtils):
             set(
                 filter(
                     lambda x: x == path, chain.from_iterable(
-                        six.itervalues(
-                            self.tops(saltenv)
-                        )
+                        self.tops(saltenv).values()
                     )
                 )
             )
@@ -714,7 +710,7 @@ class TopUtils(PathUtils):
         view = view or ['saltenv', 'abspath']
         status = {}
 
-        for key, topinfo in six.iteritems(kwargs):
+        for key, topinfo in kwargs.items():
             if topinfo:
                 status[key] = fileinfo.fileinfo_view(
                     topinfo,

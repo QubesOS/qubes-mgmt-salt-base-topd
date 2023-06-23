@@ -15,7 +15,6 @@ import fnmatch
 import logging
 
 # Import salt libs
-import salt.ext.six as six
 import salt.fileclient
 import salt.loader
 import salt.template
@@ -224,7 +223,7 @@ def render_top(opts, toputils, pillar=False):  # pylint: disable=W0621
                     )
 
     # Search initial top files for includes
-    for saltenv, ctops in six.iteritems(tops):
+    for saltenv, ctops in tops.items():
         for ctop in ctops:
             if 'include' not in ctop:
                 continue
@@ -235,7 +234,7 @@ def render_top(opts, toputils, pillar=False):  # pylint: disable=W0621
     # Go through the includes and pull out the extra tops and add them
     while include:
         pops = []
-        for saltenv, states in six.iteritems(include):
+        for saltenv, states in include.items():
             pops.append(saltenv)
             if not states:
                 continue
@@ -276,10 +275,10 @@ def merge_tops(tops):
     # List of complied tops
     for _top in tops:
         # Compiled tops of one tops file
-        for ctops in six.itervalues(_top):
+        for ctops in _top.values():
             # Targets in a list
             for ctop in ctops:
-                for saltenv, targets in six.iteritems(ctop):
+                for saltenv, targets in ctop.items():
                     if saltenv == 'include':
                         continue
                     try:
@@ -294,7 +293,7 @@ def merge_tops(tops):
                                     comp, dict
                                 ) and comp not in matches:
                                     matches.append(comp)
-                                if isinstance(comp, six.string_types):
+                                if isinstance(comp, str):
                                     states.add(comp)
                             top[saltenv][tgt] = matches
                             top[saltenv][tgt].extend(list(states))

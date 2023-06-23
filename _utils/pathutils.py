@@ -58,7 +58,6 @@ from itertools import (chain, product, starmap, )
 
 # Import salt libs
 import salt.fileclient
-import salt.ext.six as six
 
 from salt.exceptions import SaltRenderError
 from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
@@ -151,7 +150,7 @@ class PathUtils(object):
         '''
         if saltenv:
             saltenvs = saltenv
-            if isinstance(saltenv, six.string_types):
+            if isinstance(saltenv, str):
                 saltenvs = [saltenvs]
         else:
             if not self._saltenvs:
@@ -175,7 +174,7 @@ class PathUtils(object):
             List of roots to include (cache_roots, file_roots and/or
             pillar_roots).  If include is None, all roots are included.
         '''
-        if isinstance(include, six.string_types):
+        if isinstance(include, str):
             include = [include]
 
         default_includes = ['cache_roots', 'file_roots', 'pillar_roots']
@@ -187,7 +186,7 @@ class PathUtils(object):
         def to_named_tuple(element):
             return list(
                 Roots(saltenv, path)
-                for saltenv, paths in six.iteritems(element) for path in paths
+                for saltenv, paths in element.items() for path in paths
                 if saltenv in saltenvs
             )
 
@@ -492,7 +491,7 @@ class PathUtils(object):
 
         :param path:
         '''
-        if isinstance(path, six.string_types):
+        if isinstance(path, str):
             return salt.utils.url.validate(path, ['salt'])
         return False
 
@@ -640,9 +639,7 @@ class PathUtils(object):
             set(
                 filter(
                     lambda x: x == path, chain.from_iterable(
-                        six.itervalues(
-                            self.states(saltenv)
-                        )
+                        self.states(saltenv).values()
                     )
                 )
             )
