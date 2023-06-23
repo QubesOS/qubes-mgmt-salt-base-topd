@@ -1,3 +1,10 @@
+qubes-mgmt-salt-base-topd (4.2.1-1) unstable; urgency=medium
+
+  * Do not use six, salt it py3 native already
+  * Exclude building on bookworm
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Fri, 23 Jun 2023 16:25:22 +0200
+
 qubes-mgmt-salt-base-topd (4.2.0-1) unstable; urgency=medium
 
   * Update for Python 3.11
