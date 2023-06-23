@@ -9,3 +9,7 @@ vm:
   deb:
     build:
       - debian
+
+vm-bookworm:
+  deb:
+    build: []
