@@ -141,7 +141,7 @@ def find(files, **patterns):
     Search files based on one or more patterns, where patterns consist of
     the files 'index_name = pattern' such as:
 
-        relpath = [r'.*\.sls']
+        relpath = [r'.*\\.sls']
 
     Parameters
     ----------
