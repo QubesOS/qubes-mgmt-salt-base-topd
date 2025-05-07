@@ -332,7 +332,7 @@ class TopUtils(PathUtils):
             except SaltRenderError:
                 return ''
 
-        if relpath.startswith(self.topd_directory):  # pylint: disable=E1101
+        if relpath.startswith(self.topd_directory + os.sep):  # pylint: disable=E1101
             relpath = relpath.split(self.topd_directory + os.sep)[
                 1
             ]  # pylint: disable=E1101
