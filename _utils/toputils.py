@@ -333,7 +333,7 @@ class TopUtils(PathUtils):
                 return ''
 
         if relpath.startswith(self.topd_directory + os.sep):  # pylint: disable=E1101
-            relpath = relpath.split(self.topd_directory + os.sep)[
+            relpath = relpath.split(self.topd_directory + os.sep, maxsplit=1)[
                 1
             ]  # pylint: disable=E1101
 
