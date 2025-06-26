@@ -1,3 +1,11 @@
+qubes-mgmt-salt-base-topd (4.3.1-1) unstable; urgency=medium
+
+  [ Zaz Brown ]
+  * fix: only recognize `_tops/`, not `_tops<SOMETHING>/`
+  *  fix: recognize paths even if they contain `_tops/`
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Thu, 26 Jun 2025 19:19:22 +0200
+
 qubes-mgmt-salt-base-topd (4.3.0-1) unstable; urgency=medium
 
   * Fix escape sequence in docstring
