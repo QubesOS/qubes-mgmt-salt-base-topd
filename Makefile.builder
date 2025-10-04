@@ -10,9 +10,7 @@ ifndef LOADING_PLUGINS
         endif
     else ifeq ($(PACKAGE_SET),vm)
         ifneq ($(filter $(DISTRIBUTION), debian qubuntu),)
-            ifneq ($(DIST),bookworm)
-                DEBIAN_BUILD_DIRS := $(call get-mgmt-debian-dir)
-            endif
+            DEBIAN_BUILD_DIRS := $(call get-mgmt-debian-dir)
         else
             RPM_SPEC_FILES := $(call get-mgmt-rpm-spec)
         endif
