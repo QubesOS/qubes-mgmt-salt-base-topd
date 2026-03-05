@@ -21,7 +21,7 @@ import os
 from itertools import (chain, compress, )  # pylint: disable=E0598
 
 # Import salt libs
-from salt.utils.odict import OrderedDict
+from salt.utils.datastructures import OrderedDict
 
 # Import custom libs
 import matcher

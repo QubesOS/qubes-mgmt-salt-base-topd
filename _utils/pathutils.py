@@ -60,7 +60,7 @@ from itertools import (chain, product, starmap, )
 import salt.fileclient
 
 from salt.exceptions import SaltRenderError
-from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
+from salt.utils.datastructures import (OrderedDict, DefaultOrderedDict)
 from salt.utils.url import urlparse
 
 # Import custom libs

@@ -20,7 +20,7 @@ import re
 from itertools import (chain, compress, )  # pylint: disable=E0598
 
 # Import salt libs
-from salt.utils.odict import OrderedDict
+from salt.utils.datastructures import OrderedDict
 
 # Enable logging
 log = logging.getLogger(__name__)

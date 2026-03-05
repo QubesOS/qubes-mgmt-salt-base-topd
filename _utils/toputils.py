@@ -40,7 +40,7 @@ from itertools import (chain, )
 
 # Import salt libs
 from salt.exceptions import SaltRenderError
-from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
+from salt.utils.datastructures import (OrderedDict, DefaultOrderedDict)
 from salt.utils.jinja import PrintableDict
 
 # Import custom libs
