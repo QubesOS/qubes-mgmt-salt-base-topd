@@ -16,7 +16,7 @@ import logging
 import os
 
 # Import salt libs
-from salt.utils.odict import OrderedDict
+from salt.utils.datastructures import OrderedDict
 
 # Import custom libs
 import matcher

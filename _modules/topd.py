@@ -21,7 +21,7 @@ import salt.template
 import salt.version
 
 from salt.exceptions import SaltRenderError
-from salt.utils.odict import (OrderedDict, DefaultOrderedDict)
+from salt.utils.datastructures import (OrderedDict, DefaultOrderedDict)
 
 # Import custom libs
 from toputils import TopUtils  # pylint: disable=E0401
