@@ -13,6 +13,7 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import logging
+import json  # for error messages
 
 # Import salt libs
 import salt.fileclient
@@ -274,10 +275,19 @@ def merge_tops(tops):
 
     # List of complied tops
     for _top in tops:
+        # ensure _top is a valid dictionary
+        if not isinstance(_top, dict):
+            raise SaltRenderError('Expected dictionary from SALT envs to ' \
+                    + 'dictionary of VMs to states, but got: ' + json.dumps(_top)) 
         # Compiled tops of one tops file
         for ctops in _top.values():
             # Targets in a list
             for ctop in ctops:
+                # ensure ctop is a valid dictionary
+                if not isinstance(ctop, dict): 
+                    raise SaltRenderError('Expected dictionary from VMs to ' \
+                            + 'list of states, but got: ' + json.dumps(ctop) \
+                            + '. This was found in ' + json.dumps(_top)) 
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
                         continue
