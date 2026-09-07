@@ -552,8 +552,39 @@ class TopUtils(PathUtils):
 
         # Don't include tops link target
         enabled.update(set(self.include_links(enabled)))
+        enabled_realpaths = [info.realpath for info in enabled]
 
         disabled = set(all_tops).difference(enabled)
+        # all_tops includes duplicated entries for the same "toppath",
+        # deduplicate them against common path, as enabled paths are symlinks.
+        #
+        # enabled: {
+        #   Info(
+        #       saltenv='base', file_root='/srv/pillar', cache_root='',
+        #       abspath='/srv/pillar/_tops/base/qvm.disposable-preload.top',
+        #       relpath='_tops/base/qvm.disposable-preload.top',
+        #       is_pillar=True, toppath='qvm.disposable-preload.top',
+        #       realpath='/srv/pillar/base/qvm/disposable-preload.top'
+        #   )
+        # }
+        # disabled: {
+        #   Info(
+        #       saltenv='base', file_root='/srv/pillar/base', cache_root='',
+        #       abspath='/srv/pillar/base/qvm/disposable-preload.top',
+        #       relpath='qvm/disposable-preload.top', is_pillar=True,
+        #       toppath='qvm.disposable-preload.top', realpath=''
+        #   ),
+        #   Info(
+        #       saltenv='base', file_root='/srv/pillar', cache_root='',
+        #       abspath='/srv/pillar/base/qvm/disposable-preload.top',
+        #       relpath='base/qvm/disposable-preload.top', is_pillar=True,
+        #       toppath='qvm.disposable-preload.top', realpath=''
+        #   )
+        # }
+        for info in disabled.copy():
+            if info.abspath in enabled_realpaths:
+                disabled.remove(info)
+
         view = view or ['saltenv', 'abspath']
         return fileinfo.fileinfo_view(list(disabled), view=view, flat=flat)
 
