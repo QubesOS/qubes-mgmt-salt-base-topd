@@ -1,3 +1,10 @@
+qubes-mgmt-salt-base-topd (4.3.4-1) unstable; urgency=medium
+
+  [ Ben Grande ]
+  * Disregard enabled tops from the disabled ones
+
+ -- Marek Marczykowski-Górecki <marmarek@invisiblethingslab.com>  Thu, 10 Sep 2026 02:22:58 +0200
+
 qubes-mgmt-salt-base-topd (4.3.3-1) unstable; urgency=medium
 
   [ Rohit Yadav ]
